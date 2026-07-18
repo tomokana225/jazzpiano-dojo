@@ -41,6 +41,12 @@ const MODES = [
     title: "スタンダード バッキング",
     description: "ベース&ドラムの伴奏に合わせてコードチェンジを追いかけながらコンピングする実践練習。",
   },
+  {
+    to: "/identify",
+    icon: "🔍",
+    title: "逆引き",
+    description: "自分でコードやスケールを弾いて、それが何なのかアプリに当ててもらう耳トレ&確認ツール。",
+  },
 ] as const;
 
 export default function Home() {

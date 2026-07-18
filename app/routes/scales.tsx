@@ -101,6 +101,10 @@ function StraightScaleTrainer() {
     () => buildSequence(round.root, round.scaleId, includeDescending),
     [round.root, round.scaleId, includeDescending],
   );
+  const fullScalePitchClasses = useMemo(
+    () => new Set(scale.intervals.map((interval) => pc(round.root + interval))),
+    [scale, round.root],
+  );
 
   const nextRound = useCallback(() => {
     const pool = selectedScales.size > 0 ? [...selectedScales] : DEFAULT_PRACTICE_SCALES;
@@ -203,11 +207,16 @@ function StraightScaleTrainer() {
         </div>
       </div>
 
+      <p className="text-xs text-slate-500">
+        <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "#fef3c7" }} />
+        鍵盤の薄い色がスケール全体の音、明るいオレンジが次に弾く音です。
+      </p>
       <PianoKeyboard
         lowMidi={48}
         highMidi={72}
         activeNotes={activeNotes}
         targetPitchClasses={targetPc !== null ? new Set([targetPc]) : undefined}
+        referencePitchClasses={fullScalePitchClasses}
         onNoteDown={pressNote}
         onNoteUp={releaseNote}
       />
@@ -306,6 +315,10 @@ function ScalePhraseTrainer() {
   const notes = useMemo(
     () => computePhraseNotes(round.scaleId, round.root, round.patternId, bpm),
     [round, bpm],
+  );
+  const fullScalePitchClasses = useMemo(
+    () => new Set(scale.intervals.map((interval) => pc(round.root + interval))),
+    [scale, round.root],
   );
 
   const handleFinish = useCallback(
@@ -411,6 +424,7 @@ function ScalePhraseTrainer() {
         highMidi={91}
         activeNotes={activeNotes}
         targetPitchClasses={targetPitchClasses}
+        referencePitchClasses={fullScalePitchClasses}
         onNoteDown={pressNote}
         onNoteUp={releaseNote}
       />

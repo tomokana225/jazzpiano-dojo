@@ -7,4 +7,5 @@ export default [
   route("voicings", "routes/voicings.tsx"),
   route("ii-v-i", "routes/ii-v-i.tsx"),
   route("standards", "routes/standards.tsx"),
+  route("identify", "routes/identify.tsx"),
 ] satisfies RouteConfig;

@@ -1,6 +1,7 @@
 import { NavLink } from "react-router";
 import type { ReactNode } from "react";
 import { MidiStatusBadge } from "~/components/MidiStatusBadge";
+import { LiveMidiAudio } from "~/components/LiveMidiAudio";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 
 const NAV_ITEMS = [
@@ -10,6 +11,7 @@ const NAV_ITEMS = [
   { to: "/voicings", label: "ボイシング" },
   { to: "/ii-v-i", label: "II-V-Iリック" },
   { to: "/standards", label: "スタンダード" },
+  { to: "/identify", label: "逆引き" },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -51,6 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
               <span>🔥{state.streakDays}</span>
             </div>
+            <LiveMidiAudio />
             <MidiStatusBadge />
           </div>
         </div>

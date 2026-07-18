@@ -15,6 +15,8 @@ export interface PianoKeyboardProps {
   targetMidiNotes?: Set<number>;
   /** Highlight any octave of these pitch classes as the goal (used for chords / scales). */
   targetPitchClasses?: Set<number>;
+  /** Softer "for reference" highlight (e.g. the full scale shape) shown under the goal highlight. */
+  referencePitchClasses?: Set<number>;
   onNoteDown?: (midi: number) => void;
   onNoteUp?: (midi: number) => void;
   className?: string;
@@ -32,6 +34,7 @@ export function PianoKeyboard({
   activeNotes,
   targetMidiNotes,
   targetPitchClasses,
+  referencePitchClasses,
   onNoteDown,
   onNoteUp,
   className,
@@ -67,6 +70,10 @@ export function PianoKeyboard({
     onNoteUp?.(midi);
   }
 
+  function isReference(midi: number): boolean {
+    return referencePitchClasses?.has(pc(midi)) ?? false;
+  }
+
   function whiteFill(k: KeyGeom): string {
     const active = activeNotes.has(k.midi);
     const target = isTarget(k.midi);
@@ -74,6 +81,7 @@ export function PianoKeyboard({
     if (active && hasGoal && !target) return "#f87171"; // wrong - red
     if (active) return "#93c5fd"; // pressed, no goal context - blue
     if (target) return "#fde68a"; // goal outline fill - amber
+    if (isReference(k.midi)) return "#fef3c7"; // soft reference tint (e.g. full scale shape)
     return "#f8fafc";
   }
 
@@ -84,6 +92,7 @@ export function PianoKeyboard({
     if (active && hasGoal && !target) return "#dc2626";
     if (active) return "#60a5fa";
     if (target) return "#d97706";
+    if (isReference(k.midi)) return "#4a3510";
     return "#111827";
   }
 
