@@ -4,7 +4,7 @@ import { PianoKeyboard } from "~/components/PianoKeyboard";
 import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { chordSymbol } from "~/lib/theory/chords";
-import { candidateScales, identifyChords, identifyScales } from "~/lib/theory/identify";
+import { candidateScales, identifyChords, identifyScalesAllRoots } from "~/lib/theory/identify";
 import { jazzRootName, pc, type PitchClass } from "~/lib/theory/notes";
 import { SCALES, type ScaleId } from "~/lib/theory/scales";
 
@@ -137,9 +137,12 @@ function ScaleIdentifyTrainer() {
 
   const root = playedSequence[0] ?? null;
   const heldPitchClasses = useMemo(() => new Set(playedSequence), [playedSequence]);
+  // Try every held note as a candidate root so the scale is recognized no
+  // matter the octave, order, or which note was played first; the first note
+  // actually played is floated to the top as the most likely intended root.
   const exactMatches = useMemo(
-    () => (root !== null ? identifyScales(root, heldPitchClasses) : []),
-    [root, heldPitchClasses],
+    () => identifyScalesAllRoots(heldPitchClasses, root ?? undefined),
+    [heldPitchClasses, root],
   );
   const candidates = useMemo(
     () => (root !== null ? candidateScales(root, heldPitchClasses) : []),

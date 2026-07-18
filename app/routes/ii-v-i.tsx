@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Route } from "./+types/ii-v-i";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
+import { LickStaff, type StaffNote } from "~/components/LickStaff";
 import { ScoreHud } from "~/components/ScoreHud";
 import { FeedbackBanner, type FeedbackKind } from "~/components/FeedbackBanner";
 import { MultiSelectChips } from "~/components/MultiSelectChips";
@@ -63,6 +64,10 @@ export default function IiVITrainer() {
   }, []);
 
   const notes = useMemo(() => computeTimedNotes(round.lick, round.keyRoot, bpm), [round, bpm]);
+  const staffNotes = useMemo<StaffNote[]>(
+    () => round.lick.notes.map((n) => ({ midi: 60 + round.keyRoot + n.semitone, dur: n.dur, chord: n.chord })),
+    [round],
+  );
 
   const handleFinish = useCallback(
     (success: boolean) => {
@@ -116,6 +121,10 @@ export default function IiVITrainer() {
           Key of {jazzRootName(round.keyRoot)} ・ {round.lick.nameJa}
         </p>
         <p className="mx-auto mt-2 max-w-lg text-xs text-slate-500">{round.lick.descriptionJa}</p>
+
+        <div className="mt-4">
+          <LickStaff notes={staffNotes} keyRoot={round.keyRoot} currentIndex={currentIndex} states={noteStates} />
+        </div>
 
         <div className="mt-4 flex flex-wrap justify-center gap-1">
           {notes.map((n, idx) => {

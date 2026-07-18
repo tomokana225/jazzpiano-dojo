@@ -10,8 +10,15 @@ export function LiveMidiAudio() {
 
   if (audioEnabled) {
     return (
-      <span className="flex items-center gap-1 rounded-full border border-emerald-700/50 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
-        🔊 音声ON
+      <span
+        className="flex cursor-help items-center gap-1 rounded-full border border-emerald-700/50 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300"
+        title={
+          "低遅延モードで再生中です。\n" +
+          "※ ブラウザはASIO等のネイティブ音声ドライバに直接アクセスできないため、Web Audioで可能な最小遅延に設定しています。\n" +
+          "さらに遅延を詰めたい場合は、外部音源(DAW/ハード音源)をASIOで鳴らし、MIDIキーボードから直接そちらへ送る運用がおすすめです(このアプリは判定と可視化に使用)。"
+        }
+      >
+        🔊 音声ON (低遅延)
       </span>
     );
   }

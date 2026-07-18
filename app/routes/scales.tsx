@@ -9,6 +9,7 @@ import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
 import { useNotePlayer } from "~/lib/hooks/useSynth";
 import { useTimedSequence, type TimedNoteSpec } from "~/lib/hooks/useTimedSequence";
+import { FallingNotes, type FallingNote } from "~/components/FallingNotes";
 import { DEFAULT_PRACTICE_SCALES, SCALES, SCALE_ORDER, scaleDegreeSemitone, scaleSequence, type ScaleId } from "~/lib/theory/scales";
 import { SCALE_PHRASE_PATTERNS } from "~/lib/theory/scalePhrases";
 import { jazzRootName, nearestMidiForPitchClass, pc, randomPitchClass, type PitchClass } from "~/lib/theory/notes";
@@ -17,7 +18,13 @@ export function meta({}: Route.MetaArgs) {
   return [{ title: "スケール練習 - Jazz Piano Dojo" }];
 }
 
-type Mode = "straight" | "phrase";
+type Mode = "straight" | "falling" | "phrase";
+
+const MODE_TABS: { id: Mode; label: string }[] = [
+  { id: "straight", label: "スケール(順番演奏)" },
+  { id: "falling", label: "ノートを叩く(譜面不要)" },
+  { id: "phrase", label: "フレーズ(タイミングゲーム)" },
+];
 
 export default function ScalesPractice() {
   const [mode, setMode] = useState<Mode>("straight");
@@ -30,28 +37,24 @@ export default function ScalesPractice() {
         </p>
       </div>
 
-      <div className="inline-flex rounded-full border border-slate-800 bg-slate-900/60 p-1 text-xs">
-        <button
-          type="button"
-          onClick={() => setMode("straight")}
-          className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
-            mode === "straight" ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
-          }`}
-        >
-          スケール(順番演奏)
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("phrase")}
-          className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
-            mode === "phrase" ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
-          }`}
-        >
-          フレーズ(タイミングゲーム)
-        </button>
+      <div className="inline-flex flex-wrap rounded-full border border-slate-800 bg-slate-900/60 p-1 text-xs">
+        {MODE_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setMode(tab.id)}
+            className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
+              mode === tab.id ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {mode === "straight" ? <StraightScaleTrainer /> : <ScalePhraseTrainer />}
+      {mode === "straight" && <StraightScaleTrainer />}
+      {mode === "falling" && <FallingScaleTrainer />}
+      {mode === "phrase" && <ScalePhraseTrainer />}
     </div>
   );
 }
@@ -242,6 +245,157 @@ function StraightScaleTrainer() {
             />
             上行だけでなく下行も演奏する
           </label>
+        </div>
+      </details>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Falling-notes mode: Synthesia-style notes drop from the top onto the keys.
+// No sheet-music reading needed — just hit each key as its note reaches the
+// line. Notes fall in a fixed octave lane but any octave counts as a hit.
+// ---------------------------------------------------------------------------
+
+const FALLING_LOW = 48; // C3
+const FALLING_HIGH = 72; // C5
+
+function buildFallingNotes(root: PitchClass, scaleId: ScaleId, bpm: number): FallingNote[] {
+  const intervals = scaleSequence(SCALES[scaleId]); // includes octave
+  const base = nearestMidiForPitchClass(root, 60);
+  const secPerNote = 60 / bpm; // one note per beat
+  const lead = 2.4; // matches FallingNotes fallSeconds so the first note has room to fall
+  const ascending = intervals.map((interval, idx) => ({ midi: base + interval, hitAtSec: lead + idx * secPerNote }));
+  const descending = [...intervals.slice(0, -1)].reverse().map((interval, idx) => ({
+    midi: base + interval,
+    hitAtSec: lead + (intervals.length + idx) * secPerNote,
+  }));
+  return [...ascending, ...descending];
+}
+
+function FallingScaleTrainer() {
+  const { activeNotes, pressNote, releaseNote } = useMidiContext();
+  const { recordResult } = useProgressContext();
+  const score = useRoundScore();
+
+  const [selectedScales, setSelectedScales] = useState<Set<ScaleId>>(() => new Set(DEFAULT_PRACTICE_SCALES));
+  const [bpm, setBpm] = useState(70);
+  const [round, setRound] = useState<{ id: number; root: PitchClass; scaleId: ScaleId }>(() => ({
+    id: 0,
+    root: 0,
+    scaleId: "ionian",
+  }));
+  const [running, setRunning] = useState(false);
+
+  useEffect(() => {
+    const pool = [...DEFAULT_PRACTICE_SCALES];
+    setRound({ id: 1, root: randomPitchClass(), scaleId: pool[Math.floor(Math.random() * pool.length)] });
+  }, []);
+
+  const scale = SCALES[round.scaleId];
+  const notes = useMemo(() => buildFallingNotes(round.root, round.scaleId, bpm), [round, bpm]);
+  const fullScalePitchClasses = useMemo(
+    () => new Set(scale.intervals.map((interval) => pc(round.root + interval))),
+    [scale, round.root],
+  );
+
+  const handleResult = useCallback(
+    (_index: number, hit: boolean) => {
+      score.registerResult(hit);
+      recordResult("scales", hit);
+    },
+    [score, recordResult],
+  );
+
+  const start = useCallback(() => {
+    score.reset();
+    setRunning(false);
+    // Toggle off then on so FallingNotes restarts its clock even for the same round.
+    window.setTimeout(() => setRunning(true), 20);
+  }, [score]);
+
+  const pickRound = useCallback(() => {
+    const pool = selectedScales.size > 0 ? [...selectedScales] : DEFAULT_PRACTICE_SCALES;
+    setRound((prev) => ({ id: prev.id + 1, root: randomPitchClass(), scaleId: pool[Math.floor(Math.random() * pool.length)] }));
+    setRunning(false);
+  }, [selectedScales]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <ScoreHud correct={score.correct} total={score.total} streak={score.streak} bestStreak={score.bestStreak} />
+      </div>
+
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center">
+        <p className="text-xs uppercase tracking-widest text-slate-500">Falling Notes</p>
+        <p className="mt-2 text-3xl font-bold text-amber-300">
+          {jazzRootName(round.root)} {scale.nameJa}
+        </p>
+        <p className="mt-2 text-sm text-slate-400">
+          上から降ってくるノートが下のラインに届いた瞬間に、同じ鍵盤を押してください(オクターブ違いでもOK)。
+        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={start}
+            className="rounded-full bg-amber-400 px-5 py-1.5 text-xs font-semibold text-slate-900 hover:bg-amber-300"
+          >
+            ▶ スタート
+          </button>
+          <button
+            type="button"
+            onClick={pickRound}
+            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+          >
+            🔀 別のスケール
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <FallingNotes
+          lowMidi={FALLING_LOW}
+          highMidi={FALLING_HIGH}
+          notes={notes}
+          running={running}
+          onResult={handleResult}
+          onComplete={() => setRunning(false)}
+        />
+        <PianoKeyboard
+          lowMidi={FALLING_LOW}
+          highMidi={FALLING_HIGH}
+          activeNotes={activeNotes}
+          referencePitchClasses={fullScalePitchClasses}
+          onNoteDown={pressNote}
+          onNoteUp={releaseNote}
+          className="rounded-b-xl border border-t-0 border-slate-800"
+        />
+      </div>
+
+      <details className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-400" open>
+        <summary className="cursor-pointer select-none font-semibold text-slate-200">練習設定</summary>
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="mb-2 text-xs text-slate-500">出題するスケール</p>
+            <MultiSelectChips
+              options={SCALE_ORDER}
+              selected={selectedScales}
+              onChange={setSelectedScales}
+              labelFor={(id) => SCALES[id].nameJa}
+            />
+          </div>
+          <div>
+            <p className="mb-2 text-xs text-slate-500">スピード: {bpm} BPM</p>
+            <input
+              type="range"
+              min={40}
+              max={120}
+              step={5}
+              value={bpm}
+              onChange={(e) => setBpm(Number(e.target.value))}
+              className="w-full accent-amber-400"
+            />
+          </div>
         </div>
       </details>
     </div>

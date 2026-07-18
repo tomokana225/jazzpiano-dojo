@@ -54,6 +54,29 @@ export function identifyScales(root: PitchClass, heldPitchClasses: Set<PitchClas
   return matches;
 }
 
+/**
+ * Like identifyScales, but tries every held pitch class as a candidate root
+ * so the played notes are recognized regardless of octave, order, or which
+ * note the learner happened to start on (e.g. the same seven notes read as
+ * C Ionian, D Dorian, G Mixolydian…). `preferredRoot` (typically the first
+ * note actually played) is floated to the top so the most likely intended
+ * reading is listed first.
+ */
+export function identifyScalesAllRoots(
+  heldPitchClasses: Set<PitchClass>,
+  preferredRoot?: PitchClass,
+): ScaleMatch[] {
+  if (heldPitchClasses.size < 3) return [];
+  const matches: ScaleMatch[] = [];
+  for (const root of heldPitchClasses) {
+    matches.push(...identifyScales(root, heldPitchClasses));
+  }
+  if (preferredRoot === undefined) return matches;
+  return matches.sort(
+    (a, b) => Number(b.root === preferredRoot) - Number(a.root === preferredRoot),
+  );
+}
+
 /** Scales still consistent with what's been played so far (subset match), for live narrowing feedback. */
 export function candidateScales(root: PitchClass, heldPitchClasses: Set<PitchClass>): ScaleId[] {
   const relative = [...heldPitchClasses].map((p) => pc(p - root));

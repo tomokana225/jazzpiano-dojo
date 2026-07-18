@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { pc, midiToNoteName } from "~/lib/theory/notes";
-
-const WHITE_PCS = new Set([0, 2, 4, 5, 7, 9, 11]);
-const WHITE_KEY_W = 34;
-const WHITE_KEY_H = 140;
-const BLACK_KEY_W = 21;
-const BLACK_KEY_H = 88;
+import {
+  keyboardLayout,
+  WHITE_KEY_W,
+  WHITE_KEY_H,
+  BLACK_KEY_W,
+  BLACK_KEY_H,
+} from "~/lib/keyboardGeometry";
 
 export interface PianoKeyboardProps {
   lowMidi?: number;
@@ -22,11 +23,7 @@ export interface PianoKeyboardProps {
   className?: string;
 }
 
-interface KeyGeom {
-  midi: number;
-  x: number;
-  isWhite: boolean;
-}
+type KeyGeom = { midi: number; x: number; isWhite: boolean };
 
 export function PianoKeyboard({
   lowMidi = 48,
@@ -39,21 +36,10 @@ export function PianoKeyboard({
   onNoteUp,
   className,
 }: PianoKeyboardProps) {
-  const { whites, blacks, width } = useMemo(() => {
-    const whites: KeyGeom[] = [];
-    const blacks: KeyGeom[] = [];
-    let whiteCount = 0;
-    for (let midi = lowMidi; midi <= highMidi; midi++) {
-      const isWhite = WHITE_PCS.has(pc(midi));
-      if (isWhite) {
-        whites.push({ midi, x: whiteCount * WHITE_KEY_W, isWhite: true });
-        whiteCount++;
-      } else {
-        blacks.push({ midi, x: whiteCount * WHITE_KEY_W - BLACK_KEY_W / 2, isWhite: false });
-      }
-    }
-    return { whites, blacks, width: whiteCount * WHITE_KEY_W };
-  }, [lowMidi, highMidi]);
+  const { whites, blacks, width } = useMemo(
+    () => keyboardLayout(lowMidi, highMidi),
+    [lowMidi, highMidi],
+  );
 
   function isTarget(midi: number): boolean {
     if (targetMidiNotes?.has(midi)) return true;
