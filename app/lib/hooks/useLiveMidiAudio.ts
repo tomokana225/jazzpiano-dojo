@@ -1,0 +1,80 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import type * as ToneNS from "tone";
+import { useMidiContext } from "~/lib/context/MidiProvider";
+
+/**
+ * Makes every note-on/note-off event (real MIDI hardware AND the on-screen
+ * fallback keyboard) audible in real time via a persistent Tone.js synth.
+ * Mounted once near the app root so sound works everywhere without each
+ * practice page having to wire it up.
+ *
+ * Browsers require a real user gesture before audio can play, so this
+ * exposes `audioEnabled` / `enableAudio` for a one-time "enable sound"
+ * button; MIDI hardware note-on events aren't reliably treated as a
+ * qualifying gesture, so we can't just auto-start on the first note.
+ */
+export function useLiveMidiAudio() {
+  const { subscribe } = useMidiContext();
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const toneRef = useRef<typeof ToneNS | null>(null);
+  const synthRef = useRef<ToneNS.PolySynth | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    import("tone").then((Tone) => {
+      if (cancelled) return;
+      toneRef.current = Tone;
+      // Minimize software latency. Browsers can't reach ASIO/CoreAudio
+      // exclusive modes, but two Web Audio levers help a lot for live play:
+      //  - latencyHint "interactive" asks the OS for the smallest safe
+      //    output buffer.
+      //  - lookAhead 0 removes Tone's default 100ms scheduler look-ahead so
+      //    notes triggered "now" fire immediately instead of being queued.
+      const ctx = Tone.getContext();
+      ctx.lookAhead = 0;
+      try {
+        ctx.latencyHint = "interactive";
+      } catch {
+        // Some browsers only accept latencyHint at context construction; ignore.
+      }
+      const synth = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "triangle8" },
+        envelope: { attack: 0.004, decay: 0.15, sustain: 0.6, release: 0.5 },
+      }).toDestination();
+      synth.volume.value = -8;
+      synthRef.current = synth;
+      setAudioEnabled(ctx.state === "running");
+    });
+    return () => {
+      cancelled = true;
+      synthRef.current?.dispose();
+      synthRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    return subscribe((event) => {
+      const Tone = toneRef.current;
+      const synth = synthRef.current;
+      if (!Tone || !synth) return;
+      const freq = Tone.Frequency(event.note, "midi").toFrequency();
+      // Trigger against the raw AudioContext clock ("+0") rather than
+      // Tone.now() (which adds lookAhead), so live key presses sound with the
+      // least possible delay.
+      if (event.type === "on") {
+        synth.triggerAttack(freq, undefined, Math.max(0.05, event.velocity / 127));
+      } else {
+        synth.triggerRelease(freq, undefined);
+      }
+    });
+  }, [subscribe]);
+
+  const enableAudio = useCallback(async () => {
+    const Tone = toneRef.current ?? (await import("tone"));
+    toneRef.current = Tone;
+    await Tone.start();
+    setAudioEnabled(true);
+  }, []);
+
+  return { audioEnabled, enableAudio };
+}
