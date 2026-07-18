@@ -1,0 +1,15 @@
+import { createContext, useContext, type ReactNode } from "react";
+import { useMidi, type UseMidiResult } from "~/lib/hooks/useMidi";
+
+const MidiContext = createContext<UseMidiResult | null>(null);
+
+export function MidiProvider({ children }: { children: ReactNode }) {
+  const midi = useMidi();
+  return <MidiContext.Provider value={midi}>{children}</MidiContext.Provider>;
+}
+
+export function useMidiContext(): UseMidiResult {
+  const ctx = useContext(MidiContext);
+  if (!ctx) throw new Error("useMidiContext must be used within MidiProvider");
+  return ctx;
+}
