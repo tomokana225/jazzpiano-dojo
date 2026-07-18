@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Matches the Cloudflare project ("jazz-piano") that was already
+  // created by the Workers Builds Git integration.
+  "name": "jazz-piano",
+  "compatibility_date": "2025-01-01",
+  // Pure static-assets Worker: this app is a client-only SPA (MIDI + Web
+  // Audio all run in the browser), so no Worker script/SSR runtime is
+  // needed at all — just serve build/client and fall back to index.html
+  // for client-side routes.
+  "assets": {
+    "directory": "build/client",
+    "not_found_handling": "single-page-application"
+  }
+}
