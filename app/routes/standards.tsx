@@ -6,12 +6,20 @@ import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
 import { useBackingTrack } from "~/lib/hooks/useBackingTrack";
+import { useNotePlayer } from "~/lib/hooks/useSynth";
 import { STANDARDS } from "~/lib/theory/standards";
 import { chordSymbol, chordTones } from "~/lib/theory/chords";
-import { pc } from "~/lib/theory/notes";
+import { CHORD_SCALE_SUGGESTIONS } from "~/lib/theory/chordScales";
+import { SCALES, scaleSequence, type ScaleId } from "~/lib/theory/scales";
+import { nearestMidiForPitchClass, pc, type PitchClass } from "~/lib/theory/notes";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "スタンダード バッキング練習 - Jazz Piano Dojo" }];
+}
+
+function scalePreviewNotes(root: PitchClass, scaleId: ScaleId) {
+  const base = nearestMidiForPitchClass(root, 60);
+  return scaleSequence(SCALES[scaleId]).map((interval) => ({ midi: base + interval, beats: 0.5 }));
 }
 
 export default function StandardsPractice() {
@@ -24,6 +32,9 @@ export default function StandardsPractice() {
   const [bpm, setBpm] = useState(standard.suggestedBpm);
   const [barFlash, setBarFlash] = useState<"hit" | "miss" | null>(null);
   const [liveCoverage, setLiveCoverage] = useState(0);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [selectedScale, setSelectedScale] = useState<ScaleId>("ionian");
+  const player = useNotePlayer();
 
   const maxCoverageRef = useRef(0);
   const lastChordIndexRef = useRef(-1);
@@ -32,7 +43,8 @@ export default function StandardsPractice() {
 
   useEffect(() => {
     setBpm(standard.suggestedBpm);
-  }, [standard.suggestedBpm]);
+    setPreviewIndex(0);
+  }, [standard.suggestedBpm, standardId]);
 
   useEffect(() => stop, [stop]);
 
@@ -43,6 +55,36 @@ export default function StandardsPractice() {
   );
   const nextChord =
     currentChordIndex >= 0 ? standard.chords[(currentChordIndex + 1) % standard.chords.length] : null;
+
+  // The chord to show scale suggestions/keyboard for: the live backing-track
+  // chord while playing, or a chord the learner clicked to preview while idle
+  // (so they can browse chord-scale choices before/without starting playback).
+  const displayIndex = isPlaying ? currentChordIndex : previewIndex;
+  const displayChord = displayIndex >= 0 ? standard.chords[displayIndex] : null;
+  const displayTargetPcs = useMemo(
+    () => (displayChord ? new Set(chordTones({ root: displayChord.root, quality: displayChord.quality })) : undefined),
+    [displayChord],
+  );
+
+  const scaleSuggestions = displayChord ? CHORD_SCALE_SUGGESTIONS[displayChord.quality] : [];
+  const activeScale = scaleSuggestions.includes(selectedScale) ? selectedScale : scaleSuggestions[0];
+
+  useEffect(() => {
+    if (scaleSuggestions.length > 0 && !scaleSuggestions.includes(selectedScale)) {
+      setSelectedScale(scaleSuggestions[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayChord?.root, displayChord?.quality]);
+
+  const scaleReferencePcs = useMemo(() => {
+    if (!displayChord || !activeScale) return undefined;
+    return new Set(SCALES[activeScale].intervals.map((iv) => pc(displayChord.root + iv)));
+  }, [displayChord, activeScale]);
+
+  function playScalePreview() {
+    if (!displayChord || !activeScale) return;
+    player.playSequence(scalePreviewNotes(displayChord.root, activeScale), 180);
+  }
 
   // Track how well the learner's held notes covered the current chord's tones over the bar.
   useEffect(() => {
@@ -182,25 +224,70 @@ export default function StandardsPractice() {
 
         <div className="mt-6 flex flex-wrap justify-center gap-1.5">
           {standard.chords.map((c, idx) => (
-            <span
+            <button
               key={idx}
-              className={`rounded-md border px-2 py-1 text-xs font-medium ${
-                idx === currentChordIndex
+              type="button"
+              disabled={isPlaying}
+              onClick={() => setPreviewIndex(idx)}
+              className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                idx === displayIndex
                   ? "border-amber-400 bg-amber-400/20 text-amber-300"
-                  : "border-slate-800 bg-slate-900 text-slate-500"
-              }`}
+                  : "border-slate-800 bg-slate-900 text-slate-500 enabled:hover:border-slate-600 enabled:hover:text-slate-300"
+              } ${isPlaying ? "cursor-default" : "cursor-pointer"}`}
             >
               {chordSymbol(c)}
-            </span>
+            </button>
           ))}
         </div>
       </div>
 
+      {displayChord && (
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-slate-500">
+                {chordSymbol(displayChord)} 上で使えるスケール
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {isPlaying ? "今鳴っているコード" : "コードをタップして選択中"} ・ アドリブ練習用に候補スケールを鍵盤に薄く表示します
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={playScalePreview}
+              className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300"
+            >
+              🔊 スケールを聴く
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {scaleSuggestions.map((sid) => (
+              <button
+                key={sid}
+                type="button"
+                onClick={() => setSelectedScale(sid)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  sid === activeScale
+                    ? "border-amber-400 bg-amber-400/15 text-amber-300"
+                    : "border-slate-700 text-slate-400 hover:border-slate-500"
+                }`}
+              >
+                {SCALES[sid].nameJa}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-slate-500">
+        濃いハイライトがコードトーン、薄いハイライトが選択中のスケール音です。両方を見ながらアドリブしてみましょう。
+      </p>
       <PianoKeyboard
         lowMidi={41}
         highMidi={79}
         activeNotes={activeNotes}
-        targetPitchClasses={currentChordTargetPcs}
+        targetPitchClasses={displayTargetPcs}
+        referencePitchClasses={scaleReferencePcs}
         onNoteDown={pressNote}
         onNoteUp={releaseNote}
       />
