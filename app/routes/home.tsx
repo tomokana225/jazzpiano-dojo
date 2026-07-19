@@ -36,6 +36,12 @@ const MODES = [
     description: "定番のii-V-Iフレーズをテンポに合わせてタイミングよく演奏するリズムゲーム。",
   },
   {
+    to: "/chromatic-approach",
+    icon: "🌗",
+    title: "クロマチックアプローチ",
+    description: "半音アプローチやエンクロージャーなど、コードトーンへ寄り道して着地するアドリブ語法を練習する。",
+  },
+  {
     to: "/standards",
     icon: "🎷",
     title: "スタンダード バッキング",

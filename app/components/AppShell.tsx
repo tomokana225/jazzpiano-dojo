@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: "/scales", label: "スケール" },
   { to: "/voicings", label: "ボイシング" },
   { to: "/ii-v-i", label: "II-V-Iリック" },
+  { to: "/chromatic-approach", label: "クロマチックアプローチ" },
   { to: "/standards", label: "スタンダード" },
   { to: "/identify", label: "逆引き" },
 ] as const;
