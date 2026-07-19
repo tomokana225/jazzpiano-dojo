@@ -91,3 +91,12 @@ export function scaleDegreeSemitone(scale: Scale, degreeIndex: number): number {
   const idx = ((degreeIndex % len) + len) % len;
   return octave * 12 + scale.intervals[idx];
 }
+
+const SCALE_DEGREE_LABELS: Record<number, string> = {
+  0: "1", 1: "b2", 2: "2", 3: "b3", 4: "3", 5: "4", 6: "b5", 7: "5", 8: "b6", 9: "6", 10: "b7", 11: "7",
+};
+
+/** Degree label (e.g. "b3", "5") for a semitone offset from the root, used for on-keyboard display. */
+export function scaleDegreeLabel(offset: number): string {
+  return SCALE_DEGREE_LABELS[((offset % 12) + 12) % 12] ?? `${offset}`;
+}

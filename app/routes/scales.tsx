@@ -11,7 +11,16 @@ import { useNotePlayer } from "~/lib/hooks/useSynth";
 import { useTimedSequence, type TimedNoteSpec } from "~/lib/hooks/useTimedSequence";
 import { FallingNotes, type FallingNote } from "~/components/FallingNotes";
 import { RootPicker } from "~/components/RootPicker";
-import { DEFAULT_PRACTICE_SCALES, SCALES, SCALE_ORDER, scaleDegreeSemitone, scaleSequence, type ScaleId } from "~/lib/theory/scales";
+import {
+  DEFAULT_PRACTICE_SCALES,
+  SCALES,
+  SCALE_ORDER,
+  scaleDegreeLabel,
+  scaleDegreeSemitone,
+  scaleSequence,
+  type Scale,
+  type ScaleId,
+} from "~/lib/theory/scales";
 import { SCALE_PHRASE_PATTERNS } from "~/lib/theory/scalePhrases";
 import { jazzRootName, nearestMidiForPitchClass, pc, randomPitchClass, type PitchClass } from "~/lib/theory/notes";
 
@@ -68,6 +77,21 @@ export default function ScalesPractice() {
 // live green/red feedback via the keyboard's target-note coloring.
 // ---------------------------------------------------------------------------
 
+const EXPLORE_LOW = 48;
+const EXPLORE_HIGH = 72;
+
+/** Degree label ("1", "b3", "5"...) for every occurrence of the scale's notes across the visible keyboard range. */
+function scaleNoteLabels(root: PitchClass, scale: Scale, lowMidi: number, highMidi: number): Map<number, string> {
+  const map = new Map<number, string>();
+  for (let midi = lowMidi; midi <= highMidi; midi++) {
+    const offset = pc(midi - root);
+    if (scale.intervals.includes(offset)) {
+      map.set(midi, scaleDegreeLabel(offset));
+    }
+  }
+  return map;
+}
+
 function ScaleExplorer() {
   const { activeNotes, pressNote, releaseNote } = useMidiContext();
   const player = useNotePlayer();
@@ -78,6 +102,10 @@ function ScaleExplorer() {
   const targetPitchClasses = useMemo(
     () => new Set(scale.intervals.map((interval) => pc(root + interval))),
     [scale, root],
+  );
+  const noteLabels = useMemo(
+    () => scaleNoteLabels(root, scale, EXPLORE_LOW, EXPLORE_HIGH),
+    [root, scale],
   );
   const noteNames = useMemo(
     () => scale.intervals.map((interval) => jazzRootName(pc(root + interval))),
@@ -132,13 +160,14 @@ function ScaleExplorer() {
       </div>
 
       <p className="text-xs text-slate-500">
-        ハイライトされた鍵盤がこのスケールの構成音です。実際に弾いてみましょう — 合っていれば緑、違う音は赤になります。
+        ハイライトされた鍵盤がこのスケールの構成音です。実際に弾いてみましょう — 合っていれば緑、違う音は赤になります。鍵盤上の数字はルートから見た度数です。
       </p>
       <PianoKeyboard
-        lowMidi={48}
-        highMidi={72}
+        lowMidi={EXPLORE_LOW}
+        highMidi={EXPLORE_HIGH}
         activeNotes={activeNotes}
         targetPitchClasses={targetPitchClasses}
+        noteLabels={noteLabels}
         onNoteDown={pressNote}
         onNoteUp={releaseNote}
       />
