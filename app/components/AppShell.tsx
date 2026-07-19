@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { to: "/voicings", label: "ボイシング" },
   { to: "/ii-v-i", label: "II-V-Iリック" },
   { to: "/chromatic-approach", label: "クロマチックアプローチ" },
+  { to: "/comping", label: "コンピング" },
   { to: "/standards", label: "スタンダード" },
   { to: "/identify", label: "逆引き" },
 ] as const;

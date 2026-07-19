@@ -7,6 +7,7 @@ export default [
   route("voicings", "routes/voicings.tsx"),
   route("ii-v-i", "routes/ii-v-i.tsx"),
   route("chromatic-approach", "routes/chromatic-approach.tsx"),
+  route("comping", "routes/comping.tsx"),
   route("standards", "routes/standards.tsx"),
   route("identify", "routes/identify.tsx"),
 ] satisfies RouteConfig;
