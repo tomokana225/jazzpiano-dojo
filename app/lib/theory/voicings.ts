@@ -75,23 +75,35 @@ function shellOffsets(quality: ChordQualityId, order: "37" | "73"): number[] {
   return order === "37" ? [0, third, seventh] : [0, seventh, third + 12];
 }
 
+interface PlacedNote {
+  midi: Midi;
+  offset: number;
+}
+
 /**
  * Place a list of root-relative semitone offsets (which may repeat/skip
- * octaves) into ascending absolute MIDI notes clustered near `anchorMidi`.
+ * octaves — e.g. a "+12" 9th stacked above a 7th) into absolute MIDI notes
+ * near `anchorMidi`, sorted ascending and paired with the offset that
+ * produced each note (so callers can label notes by degree after sorting).
+ *
+ * The whole voicing is shifted by octaves as a single unit, never note by
+ * note: offsets like rootless-B's "3(+oct)"/"5(+oct)" or shell73's
+ * "7th, 3rd+12" exist specifically to spread the voicing wider than one
+ * octave. Folding each note independently to whichever octave sits nearest
+ * the anchor (the previous approach) collapsed that spread — e.g. rootless
+ * A and B voicings, which share the same 4 pitch classes by design, ended
+ * up producing the exact same notes instead of two different inversions.
  */
-function place(root: PitchClass, offsets: number[], anchorMidi: Midi): Midi[] {
+function place(root: PitchClass, offsets: number[], anchorMidi: Midi): PlacedNote[] {
   const base = nearestMidiForPitchClass(root, anchorMidi);
-  const notes = offsets.map((o) => base + o);
-  // Fold anything that drifted more than an octave+ away from the anchor
-  // back down/up so the voicing stays compact (typical LH/comping range).
-  return notes
-    .map((n) => {
-      let m = n;
-      while (m - anchorMidi > 12) m -= 12;
-      while (anchorMidi - m > 12) m += 12;
-      return m;
-    })
-    .sort((a, b) => a - b);
+  const raw = offsets.map((o) => ({ midi: base + o, offset: o }));
+  const center = raw.reduce((sum, n) => sum + n.midi, 0) / raw.length;
+  let shift = 0;
+  while (center + shift - anchorMidi > 12) shift -= 12;
+  while (anchorMidi - (center + shift) > 12) shift += 12;
+  return raw
+    .map((n) => ({ midi: n.midi + shift, offset: n.offset }))
+    .sort((a, b) => a.midi - b.midi);
 }
 
 export interface VoicingResult {
@@ -118,15 +130,15 @@ export function buildVoicing(
 ): VoicingResult | null {
   if (type === "shell37" || type === "shell73") {
     const offsets = shellOffsets(quality, type === "shell37" ? "37" : "73");
-    const notes = place(root, offsets, anchorMidi);
-    return { type, notes, degrees: offsets.map((o) => degreeLabel(pc(o))) };
+    const placed = place(root, offsets, anchorMidi);
+    return { type, notes: placed.map((p) => p.midi), degrees: placed.map((p) => degreeLabel(p.offset)) };
   }
   if (type === "rootlessA" || type === "rootlessB") {
     const table = type === "rootlessA" ? ROOTLESS_A : ROOTLESS_B;
     const offsets = table[quality];
     if (!offsets) return null;
-    const notes = place(root, offsets, anchorMidi);
-    return { type, notes, degrees: offsets.map(degreeLabel) };
+    const placed = place(root, offsets, anchorMidi);
+    return { type, notes: placed.map((p) => p.midi), degrees: placed.map((p) => degreeLabel(p.offset)) };
   }
   if (type === "drop2") {
     const third = quality.startsWith("min") || quality === "min7b5" || quality === "dim7" ? 3 : 4;
@@ -139,8 +151,8 @@ export function buildVoicing(
     // Close position root-3-5-7 ascending, then drop the 2nd-from-top (the 5th) an octave.
     const close = [0, third, fifth, seventh];
     const dropped = [close[0], close[1], close[2] - 12, close[3]];
-    const notes = place(root, dropped, anchorMidi);
-    return { type, notes, degrees: [close[0], close[1], close[2], close[3]].map((o) => degreeLabel(pc(o))) };
+    const placed = place(root, dropped, anchorMidi);
+    return { type, notes: placed.map((p) => p.midi), degrees: placed.map((p) => degreeLabel(p.offset)) };
   }
   return null;
 }

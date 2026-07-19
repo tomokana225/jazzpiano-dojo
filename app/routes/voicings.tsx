@@ -11,7 +11,7 @@ import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
 import { useNotePlayer } from "~/lib/hooks/useSynth";
 import { CHORD_QUALITIES, SEVENTH_CHORD_QUALITIES, chordSymbol, type ChordQualityId } from "~/lib/theory/chords";
-import { VOICING_TYPES, availableVoicingTypes, buildVoicing, type VoicingType } from "~/lib/theory/voicings";
+import { VOICING_TYPES, availableVoicingTypes, buildVoicing, type VoicingResult, type VoicingType } from "~/lib/theory/voicings";
 import { CIRCLE_OF_FIFTHS, jazzRootName, pc, randomPitchClass, type PitchClass } from "~/lib/theory/notes";
 
 export function meta({}: Route.MetaArgs) {
@@ -22,6 +22,12 @@ const ANCHOR_MIDI = 60;
 const ALL_VOICING_TYPES = Object.keys(VOICING_TYPES) as VoicingType[];
 const KEYBOARD_LOW = 33;
 const KEYBOARD_HIGH = 88;
+
+/** Map each voicing note to its degree label (e.g. "b9", "13") for on-keyboard display. */
+function voicingNoteLabels(voicing: VoicingResult | null | undefined): Map<number, string> | undefined {
+  if (!voicing) return undefined;
+  return new Map(voicing.notes.map((n, i) => [n, voicing.degrees[i]]));
+}
 
 type Mode = "explore" | "quiz" | "iivi";
 
@@ -88,6 +94,7 @@ function VoicingExplorer() {
     [root, quality, voicingType, anchorMidi],
   );
   const targetMidiNotes = useMemo(() => new Set(voicing?.notes ?? []), [voicing]);
+  const noteLabels = useMemo(() => voicingNoteLabels(voicing), [voicing]);
 
   function playPreview() {
     if (voicing) player.playChord(voicing.notes);
@@ -155,13 +162,14 @@ function VoicingExplorer() {
       </div>
 
       <p className="text-xs text-slate-500">
-        ハイライトされた鍵盤がこのボイシングの構成音です(オクターブも指定通り)。実際に弾いてみましょう — 合っていれば緑、違う音は赤になります。
+        ハイライトされた鍵盤がこのボイシングの構成音です(オクターブも指定通り)。実際に弾いてみましょう — 合っていれば緑、違う音は赤になります。鍵盤上の数字はルートから見た度数です。
       </p>
       <PianoKeyboard
         lowMidi={KEYBOARD_LOW}
         highMidi={KEYBOARD_HIGH}
         activeNotes={activeNotes}
         targetMidiNotes={targetMidiNotes}
+        noteLabels={noteLabels}
         onNoteDown={pressNote}
         onNoteUp={releaseNote}
       />
@@ -216,6 +224,7 @@ function VoicingQuizTrainer() {
     [round.root, round.quality, round.voicingType, anchorMidi],
   );
   const targetMidiNotes = useMemo(() => new Set(voicing?.notes ?? []), [voicing]);
+  const noteLabels = useMemo(() => voicingNoteLabels(voicing), [voicing]);
 
   const nextRound = useCallback(() => {
     const qualities = selectedQualities.size > 0 ? [...selectedQualities] : [...SEVENTH_CHORD_QUALITIES];
@@ -288,6 +297,7 @@ function VoicingQuizTrainer() {
         highMidi={KEYBOARD_HIGH}
         activeNotes={activeNotes}
         targetMidiNotes={targetMidiNotes}
+        noteLabels={noteLabels}
         onNoteDown={pressNote}
         onNoteUp={releaseNote}
       />
@@ -383,6 +393,7 @@ function VoicingIiViTrainer() {
     [current, currentVoicingType, anchorMidi],
   );
   const targetMidiNotes = useMemo(() => new Set(voicing?.notes ?? []), [voicing]);
+  const noteLabels = useMemo(() => voicingNoteLabels(voicing), [voicing]);
 
   const advance = useCallback(() => {
     if (phase !== "playing") return;
@@ -522,6 +533,7 @@ function VoicingIiViTrainer() {
         highMidi={KEYBOARD_HIGH}
         activeNotes={activeNotes}
         targetMidiNotes={targetMidiNotes}
+        noteLabels={noteLabels}
         onNoteDown={pressNote}
         onNoteUp={releaseNote}
       />

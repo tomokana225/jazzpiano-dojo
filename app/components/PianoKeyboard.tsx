@@ -18,6 +18,8 @@ export interface PianoKeyboardProps {
   targetPitchClasses?: Set<number>;
   /** Softer "for reference" highlight (e.g. the full scale shape) shown under the goal highlight. */
   referencePitchClasses?: Set<number>;
+  /** Optional degree label (e.g. "b9", "13") printed on specific target keys, keyed by exact MIDI note. */
+  noteLabels?: Map<number, string>;
   onNoteDown?: (midi: number) => void;
   onNoteUp?: (midi: number) => void;
   className?: string;
@@ -32,6 +34,7 @@ export function PianoKeyboard({
   targetMidiNotes,
   targetPitchClasses,
   referencePitchClasses,
+  noteLabels,
   onNoteDown,
   onNoteUp,
   className,
@@ -119,24 +122,51 @@ export function PianoKeyboard({
                 {midiToNoteName(k.midi)}
               </text>
             )}
+            {noteLabels?.has(k.midi) && (
+              <text
+                x={k.x + WHITE_KEY_W / 2}
+                y={16}
+                fontSize={10}
+                fontWeight={700}
+                textAnchor="middle"
+                fill="#1e293b"
+                pointerEvents="none"
+              >
+                {noteLabels.get(k.midi)}
+              </text>
+            )}
           </g>
         ))}
         {blacks.map((k) => (
-          <rect
-            key={k.midi}
-            x={k.x}
-            y={0}
-            width={BLACK_KEY_W}
-            height={BLACK_KEY_H}
-            rx={3}
-            fill={blackFill(k)}
-            stroke="#0f172a"
-            strokeWidth={1}
-            onPointerDown={() => keyDown(k.midi)}
-            onPointerUp={() => keyUp(k.midi)}
-            onPointerLeave={() => activeNotes.has(k.midi) && keyUp(k.midi)}
-            className="cursor-pointer transition-colors duration-75"
-          />
+          <g key={k.midi}>
+            <rect
+              x={k.x}
+              y={0}
+              width={BLACK_KEY_W}
+              height={BLACK_KEY_H}
+              rx={3}
+              fill={blackFill(k)}
+              stroke="#0f172a"
+              strokeWidth={1}
+              onPointerDown={() => keyDown(k.midi)}
+              onPointerUp={() => keyUp(k.midi)}
+              onPointerLeave={() => activeNotes.has(k.midi) && keyUp(k.midi)}
+              className="cursor-pointer transition-colors duration-75"
+            />
+            {noteLabels?.has(k.midi) && (
+              <text
+                x={k.x + BLACK_KEY_W / 2}
+                y={BLACK_KEY_H - 8}
+                fontSize={9}
+                fontWeight={700}
+                textAnchor="middle"
+                fill="#f8fafc"
+                pointerEvents="none"
+              >
+                {noteLabels.get(k.midi)}
+              </text>
+            )}
+          </g>
         ))}
       </svg>
     </div>
