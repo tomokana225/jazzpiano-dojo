@@ -11,7 +11,14 @@ import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
 import { useNotePlayer } from "~/lib/hooks/useSynth";
 import { CHORD_QUALITIES, SEVENTH_CHORD_QUALITIES, chordSymbol, type ChordQualityId } from "~/lib/theory/chords";
-import { VOICING_TYPES, availableVoicingTypes, buildVoicing, type VoicingResult, type VoicingType } from "~/lib/theory/voicings";
+import {
+  VOICING_TYPES,
+  availableVoicingTypes,
+  buildVoicing,
+  nudgeVoicingToRegister,
+  type VoicingResult,
+  type VoicingType,
+} from "~/lib/theory/voicings";
 import { CIRCLE_OF_FIFTHS, jazzRootName, pc, randomPitchClass, type PitchClass } from "~/lib/theory/notes";
 
 export function meta({}: Route.MetaArgs) {
@@ -27,6 +34,44 @@ const KEYBOARD_HIGH = 88;
 function voicingNoteLabels(voicing: VoicingResult | null | undefined): Map<number, string> | undefined {
   if (!voicing) return undefined;
   return new Map(voicing.notes.map((n, i) => [n, voicing.degrees[i]]));
+}
+
+/** How far (in semitones) the chase target may drift from the base anchor. Bounds the walk
+ * below so a long practice session can't wander the register off the visible keyboard. */
+const MAX_REGISTER_DRIFT = 6;
+
+/**
+ * Target register that "chases" the center of the last voicing shown, fed
+ * into `nudgeVoicingToRegister` so consecutive voicings (next chord, next
+ * quiz round, next root/quality pick) stay within half an octave of each
+ * other instead of each one independently landing wherever `buildVoicing`'s
+ * fixed anchor happens to place it, which can differ by close to two
+ * octaves between two back-to-back chords of different qualities/types.
+ * The target itself is clamped to within `MAX_REGISTER_DRIFT` of
+ * `baseAnchor` — otherwise many small chases in the same direction in a row
+ * (a random walk, in quiz mode) could still carry the register arbitrarily
+ * far from where the user set it over a long session.
+ * `baseAnchor` (driven by the octave-shift control) resets the chase point
+ * whenever the user explicitly asks for a different octave.
+ */
+function useRegisterChasingAnchor(
+  baseAnchor: number,
+): [number, (voicing: VoicingResult | null | undefined) => void, () => void] {
+  const [anchor, setAnchor] = useState(baseAnchor);
+  useEffect(() => {
+    setAnchor(baseAnchor);
+  }, [baseAnchor]);
+  const track = useCallback(
+    (voicing: VoicingResult | null | undefined) => {
+      if (!voicing || voicing.notes.length === 0) return;
+      const center = voicing.notes.reduce((sum, n) => sum + n, 0) / voicing.notes.length;
+      const clamped = Math.min(baseAnchor + MAX_REGISTER_DRIFT, Math.max(baseAnchor - MAX_REGISTER_DRIFT, center));
+      setAnchor(clamped);
+    },
+    [baseAnchor],
+  );
+  const reset = useCallback(() => setAnchor(baseAnchor), [baseAnchor]);
+  return [anchor, track, reset];
 }
 
 type Mode = "explore" | "quiz" | "iivi";
@@ -88,11 +133,13 @@ function VoicingExplorer() {
     if (!available.includes(voicingType)) setVoicingType(available[0]);
   }, [available, voicingType]);
 
-  const anchorMidi = ANCHOR_MIDI + octaveShift * 12;
-  const voicing = useMemo(
-    () => buildVoicing(root, quality, voicingType, anchorMidi),
-    [root, quality, voicingType, anchorMidi],
-  );
+  const baseAnchor = ANCHOR_MIDI + octaveShift * 12;
+  const [registerAnchor, trackRegister] = useRegisterChasingAnchor(baseAnchor);
+  const voicing = useMemo(() => {
+    const raw = buildVoicing(root, quality, voicingType, baseAnchor);
+    return raw && nudgeVoicingToRegister(raw, registerAnchor);
+  }, [root, quality, voicingType, baseAnchor, registerAnchor]);
+  useEffect(() => trackRegister(voicing), [voicing, trackRegister]);
   const targetMidiNotes = useMemo(() => new Set(voicing?.notes ?? []), [voicing]);
   const noteLabels = useMemo(() => voicingNoteLabels(voicing), [voicing]);
 
@@ -218,11 +265,13 @@ function VoicingQuizTrainer() {
   const [feedback, setFeedback] = useState<FeedbackKind>(null);
   const [octaveShift, setOctaveShift] = useState(0);
 
-  const anchorMidi = ANCHOR_MIDI + octaveShift * 12;
-  const voicing = useMemo(
-    () => buildVoicing(round.root, round.quality, round.voicingType, anchorMidi),
-    [round.root, round.quality, round.voicingType, anchorMidi],
-  );
+  const baseAnchor = ANCHOR_MIDI + octaveShift * 12;
+  const [registerAnchor, trackRegister] = useRegisterChasingAnchor(baseAnchor);
+  const voicing = useMemo(() => {
+    const raw = buildVoicing(round.root, round.quality, round.voicingType, baseAnchor);
+    return raw && nudgeVoicingToRegister(raw, registerAnchor);
+  }, [round.root, round.quality, round.voicingType, baseAnchor, registerAnchor]);
+  useEffect(() => trackRegister(voicing), [voicing, trackRegister]);
   const targetMidiNotes = useMemo(() => new Set(voicing?.notes ?? []), [voicing]);
   const noteLabels = useMemo(() => voicingNoteLabels(voicing), [voicing]);
 
@@ -389,11 +438,13 @@ function VoicingIiViTrainer() {
   const currentVoicingType: VoicingType =
     choice === "rootlessAlt" ? ((globalChordIndex % 2 === 0) === startsWithA ? "rootlessA" : "rootlessB") : choice;
 
-  const anchorMidi = ANCHOR_MIDI + octaveShift * 12;
-  const voicing = useMemo(
-    () => buildVoicing(current.root, current.quality, currentVoicingType, anchorMidi),
-    [current, currentVoicingType, anchorMidi],
-  );
+  const baseAnchor = ANCHOR_MIDI + octaveShift * 12;
+  const [registerAnchor, trackRegister, resetRegister] = useRegisterChasingAnchor(baseAnchor);
+  const voicing = useMemo(() => {
+    const raw = buildVoicing(current.root, current.quality, currentVoicingType, baseAnchor);
+    return raw && nudgeVoicingToRegister(raw, registerAnchor);
+  }, [current, currentVoicingType, baseAnchor, registerAnchor]);
+  useEffect(() => trackRegister(voicing), [voicing, trackRegister]);
   const targetMidiNotes = useMemo(() => new Set(voicing?.notes ?? []), [voicing]);
   const noteLabels = useMemo(() => voicingNoteLabels(voicing), [voicing]);
 
@@ -432,7 +483,8 @@ function VoicingIiViTrainer() {
     setLaps(0);
     setPhase("playing");
     setFeedback(null);
-  }, []);
+    resetRegister();
+  }, [resetRegister]);
 
   function playPreview() {
     if (voicing) player.playChord(voicing.notes);

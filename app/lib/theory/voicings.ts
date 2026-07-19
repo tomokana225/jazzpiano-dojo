@@ -112,6 +112,22 @@ export interface VoicingResult {
   degrees: string[];
 }
 
+/**
+ * Shift an already-built voicing by whole octaves so its center sits as
+ * close as possible to `targetCenter` — used to keep consecutive voicings
+ * (one chord to the next) within half an octave of each other instead of
+ * each one independently landing wherever `buildVoicing`'s own anchor
+ * happens to place it, which can differ by close to two octaves between
+ * two back-to-back chords of different qualities/types.
+ */
+export function nudgeVoicingToRegister(voicing: VoicingResult, targetCenter: number): VoicingResult {
+  if (voicing.notes.length === 0) return voicing;
+  const center = voicing.notes.reduce((sum, n) => sum + n, 0) / voicing.notes.length;
+  const shift = Math.round((targetCenter - center) / 12) * 12;
+  if (shift === 0) return voicing;
+  return { ...voicing, notes: voicing.notes.map((n) => n + shift) };
+}
+
 const DEGREE_LABELS: Record<number, string> = {
   0: "R", 3: "b3", 4: "3", 6: "b5", 7: "5", 9: "6/13", 10: "b7", 11: "7",
   13: "b9", 14: "9", 15: "b3", 16: "3", 18: "b5", 19: "5", 21: "13",
