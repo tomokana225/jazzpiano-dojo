@@ -25,6 +25,11 @@ const TOP_STEP = TREBLE_BOTTOM_STEP + 8; // F5 (top line) = E4 + 8 diatonic step
 const PX_PER_EIGHTH = 26; // horizontal spacing is proportional to time, so barlines line up
 const EIGHTHS_PER_MEASURE = 8; // 4/4 time, our durations are in eighth-note units
 const STEM_LEN = 34;
+// Extra horizontal room reserved at every barline so a barline is never
+// drawn through a notehead — without this, the first note of each measure
+// lands at exactly the same x as the barline itself (both are placed by the
+// same eighths-since-start -> x mapping), so they visually overlap.
+const BAR_GAP = 28;
 
 function chordForSlot(slot: LickChordSlot, keyRoot: PitchClass): string {
   if (slot === "ii") return chordSymbol({ root: pc(keyRoot + 2), quality: "min7" });
@@ -121,7 +126,16 @@ function findBeamGroups(rnotes: RenderNote[]): number[][] {
 
 export function LickStaff({ notes, keyRoot, currentIndex = -1, states }: LickStaffProps) {
   const preferFlat = preferFlatForKey(keyRoot);
-  const timeToX = (eighths: number) => LEFT_PAD + eighths * PX_PER_EIGHTH;
+  // Every full measure elapsed before this point pushes notes right by
+  // BAR_GAP, reserving breathing room around each barline (see BAR_GAP).
+  const timeToX = (eighths: number) =>
+    LEFT_PAD + eighths * PX_PER_EIGHTH + Math.floor(eighths / EIGHTHS_PER_MEASURE) * BAR_GAP;
+  // A barline sits centered in the gap between the last note of the measure
+  // before it and the first note of the measure after it.
+  const barlineX = (measureBoundaryEighths: number) => {
+    const priorBars = measureBoundaryEighths / EIGHTHS_PER_MEASURE;
+    return LEFT_PAD + measureBoundaryEighths * PX_PER_EIGHTH + (priorBars - 1) * BAR_GAP + BAR_GAP / 2;
+  };
 
   const rnotes = useMemo(() => splitAcrossBarlines(notes), [notes]);
   const beamGroups = useMemo(() => findBeamGroups(rnotes), [rnotes]);
@@ -135,7 +149,7 @@ export function LickStaff({ notes, keyRoot, currentIndex = -1, states }: LickSta
     const totalEighths = notes.reduce((sum, n) => sum + n.dur, 0);
     const barlines: number[] = [];
     for (let m = EIGHTHS_PER_MEASURE; m < totalEighths; m += EIGHTHS_PER_MEASURE) {
-      barlines.push(timeToX(m));
+      barlines.push(barlineX(m));
     }
     const endX = timeToX(totalEighths);
     return { barlines, endX, width: endX + 24 };

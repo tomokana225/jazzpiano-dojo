@@ -86,6 +86,39 @@ export const II_V_I_LICKS: Lick[] = [
       { semitone: -8, dur: 8, chord: "I" }, // E (3, an octave down) held
     ],
   },
+  {
+    id: "evans-extensions-line",
+    nameJa: "エヴァンス風 9th/13thカラーライン",
+    descriptionJa:
+      "ビル・エヴァンスに代表される、9th/13thをコードトーンと同格に扱う語法。R-9-5-b7、3-13-9-3と積み、最後はIの3rdや根音ではなく9thの上で解決する。",
+    notes: [
+      { semitone: 2, dur: 2, chord: "ii" }, // D  (R)
+      { semitone: 4, dur: 2, chord: "ii" }, // E  (9)
+      { semitone: 9, dur: 2, chord: "ii" }, // A  (5)
+      { semitone: 12, dur: 2, chord: "ii" }, // C  (b7)
+      { semitone: 11, dur: 2, chord: "V" }, // B  (3)
+      { semitone: 16, dur: 2, chord: "V" }, // E  (13)
+      { semitone: 14, dur: 2, chord: "V" }, // D  (9)
+      { semitone: 11, dur: 2, chord: "V" }, // B  (3)
+      { semitone: 14, dur: 8, chord: "I" }, // D  (9 of Cmaj7) held
+    ],
+  },
+  {
+    id: "evans-anticipation",
+    nameJa: "エヴァンス風シンコペーション&タイ",
+    descriptionJa:
+      "ビル・エヴァンスら多くの奏者が使う、Iの解決音を1拍早く先取りしてタイで小節をまたいで伸ばすフレージング。裏拍でのアプローチと「前のめり」な解決感が特徴。",
+    notes: [
+      { semitone: 2, dur: 2, chord: "ii" }, // D  (R)
+      { semitone: 5, dur: 2, chord: "ii" }, // F  (b3)
+      { semitone: 9, dur: 2, chord: "ii" }, // A  (5)
+      { semitone: 12, dur: 2, chord: "ii" }, // C  (b7)
+      { semitone: 11, dur: 2, chord: "V" }, // B  (3)
+      { semitone: 9, dur: 2, chord: "V" }, // A  (9)
+      { semitone: 7, dur: 2, chord: "V" }, // G  (R)
+      { semitone: 16, dur: 10, chord: "I" }, // E (3 of Cmaj7) - anticipated 1拍早く入り、小節をまたいでタイで保持
+    ],
+  },
 ];
 
 export function totalLickBeats(lick: Lick): number {
