@@ -10,6 +10,7 @@ import { useRoundScore } from "~/lib/hooks/useRoundScore";
 import { useNotePlayer } from "~/lib/hooks/useSynth";
 import { useTimedSequence, type TimedNoteSpec } from "~/lib/hooks/useTimedSequence";
 import { FallingNotes, type FallingNote } from "~/components/FallingNotes";
+import { RootPicker } from "~/components/RootPicker";
 import { DEFAULT_PRACTICE_SCALES, SCALES, SCALE_ORDER, scaleDegreeSemitone, scaleSequence, type ScaleId } from "~/lib/theory/scales";
 import { SCALE_PHRASE_PATTERNS } from "~/lib/theory/scalePhrases";
 import { jazzRootName, nearestMidiForPitchClass, pc, randomPitchClass, type PitchClass } from "~/lib/theory/notes";
@@ -18,16 +19,17 @@ export function meta({}: Route.MetaArgs) {
   return [{ title: "スケール練習 - Jazz Piano Dojo" }];
 }
 
-type Mode = "straight" | "falling" | "phrase";
+type Mode = "explore" | "straight" | "falling" | "phrase";
 
 const MODE_TABS: { id: Mode; label: string }[] = [
+  { id: "explore", label: "スケールを覚える" },
   { id: "straight", label: "スケール(順番演奏)" },
   { id: "falling", label: "ノートを叩く(譜面不要)" },
   { id: "phrase", label: "フレーズ(タイミングゲーム)" },
 ];
 
 export default function ScalesPractice() {
-  const [mode, setMode] = useState<Mode>("straight");
+  const [mode, setMode] = useState<Mode>("explore");
   return (
     <div className="space-y-6">
       <div>
@@ -52,9 +54,94 @@ export default function ScalesPractice() {
         ))}
       </div>
 
+      {mode === "explore" && <ScaleExplorer />}
       {mode === "straight" && <StraightScaleTrainer />}
       {mode === "falling" && <FallingScaleTrainer />}
       {mode === "phrase" && <ScalePhraseTrainer />}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Explore mode (default): pick a root + scale and see it laid out on the
+// keyboard at your own pace — no quiz, no timer. Playing along still gives
+// live green/red feedback via the keyboard's target-note coloring.
+// ---------------------------------------------------------------------------
+
+function ScaleExplorer() {
+  const { activeNotes, pressNote, releaseNote } = useMidiContext();
+  const player = useNotePlayer();
+  const [root, setRoot] = useState<PitchClass>(0);
+  const [scaleId, setScaleId] = useState<ScaleId>("ionian");
+
+  const scale = SCALES[scaleId];
+  const targetPitchClasses = useMemo(
+    () => new Set(scale.intervals.map((interval) => pc(root + interval))),
+    [scale, root],
+  );
+  const noteNames = useMemo(
+    () => scale.intervals.map((interval) => jazzRootName(pc(root + interval))),
+    [scale, root],
+  );
+
+  function playPreview() {
+    player.playSequence(scaleAbsoluteNotes(root, scaleId, true), 130);
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div>
+            <p className="mb-2 text-xs text-slate-500">ルート</p>
+            <RootPicker value={root} onChange={setRoot} />
+          </div>
+          <div>
+            <p className="mb-2 text-xs text-slate-500">スケール</p>
+            <select
+              value={scaleId}
+              onChange={(e) => setScaleId(e.target.value as ScaleId)}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200"
+            >
+              {SCALE_ORDER.map((id) => (
+                <option key={id} value={id}>
+                  {SCALES[id].nameJa}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-6 text-center">
+          <p className="text-xs uppercase tracking-widest text-slate-500">Selected Scale</p>
+          <p className="mt-2 text-3xl font-bold text-amber-300">
+            {jazzRootName(root)} {scale.nameJa}
+          </p>
+          <p className="mt-1 text-sm text-slate-400">
+            {scale.nameEn} ・ 主な使用場面: {scale.usageJa}
+          </p>
+          <p className="mt-3 text-sm text-slate-300">{noteNames.join(" - ")}</p>
+          <button
+            type="button"
+            onClick={playPreview}
+            className="mt-4 rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300"
+          >
+            🔊 音を聞く
+          </button>
+        </div>
+      </div>
+
+      <p className="text-xs text-slate-500">
+        ハイライトされた鍵盤がこのスケールの構成音です。実際に弾いてみましょう — 合っていれば緑、違う音は赤になります。
+      </p>
+      <PianoKeyboard
+        lowMidi={48}
+        highMidi={72}
+        activeNotes={activeNotes}
+        targetPitchClasses={targetPitchClasses}
+        onNoteDown={pressNote}
+        onNoteUp={releaseNote}
+      />
     </div>
   );
 }
