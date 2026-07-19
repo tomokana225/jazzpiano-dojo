@@ -61,6 +61,12 @@ export function midiOf(pitchClass: PitchClass, octave: number): Midi {
 export const KEYS: { pitchClass: PitchClass; name: string }[] =
   JAZZ_ROOT_NAMES.map((name, pitchClass) => ({ pitchClass, name }));
 
+// The 12 keys in "circle of fifths" order used for ii-V-I cycle practice:
+// each step moves the root down a fifth (= up a fourth), the same root
+// motion as ii->V->I itself, so cycling through this list drills every key
+// via the most natural jazz voice-leading path. Starts at C.
+export const CIRCLE_OF_FIFTHS: PitchClass[] = Array.from({ length: 12 }, (_, i) => pc(i * 5));
+
 export function randomPitchClass(rng: () => number = Math.random): PitchClass {
   return Math.floor(rng() * 12);
 }
