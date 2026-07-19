@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Route } from "./+types/standards";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
 import { ScoreHud } from "~/components/ScoreHud";
+import { ProgressionPicker } from "~/components/ProgressionPicker";
 import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
 import { useBackingTrack } from "~/lib/hooks/useBackingTrack";
 import { useNotePlayer } from "~/lib/hooks/useSynth";
-import { STANDARDS } from "~/lib/theory/standards";
+import { STANDARDS, type Standard } from "~/lib/theory/standards";
 import { chordSymbol, chordTones } from "~/lib/theory/chords";
 import { CHORD_SCALE_SUGGESTIONS } from "~/lib/theory/chordScales";
 import { SCALES, scaleSequence, type ScaleId } from "~/lib/theory/scales";
@@ -27,8 +28,7 @@ export default function StandardsPractice() {
   const { recordResult } = useProgressContext();
   const score = useRoundScore();
 
-  const [standardId, setStandardId] = useState(STANDARDS[0].id);
-  const standard = STANDARDS.find((s) => s.id === standardId) ?? STANDARDS[0];
+  const [standard, setStandard] = useState<Standard>(STANDARDS[0]);
   const [bpm, setBpm] = useState(standard.suggestedBpm);
   const [barFlash, setBarFlash] = useState<"hit" | "miss" | null>(null);
   const [liveCoverage, setLiveCoverage] = useState(0);
@@ -44,9 +44,14 @@ export default function StandardsPractice() {
   useEffect(() => {
     setBpm(standard.suggestedBpm);
     setPreviewIndex(0);
-  }, [standard.suggestedBpm, standardId]);
+  }, [standard.id, standard.suggestedBpm]);
 
   useEffect(() => stop, [stop]);
+
+  function handleStandardChange(next: Standard) {
+    if (isPlaying) handleStop();
+    setStandard(next);
+  }
 
   const currentChord = currentChordIndex >= 0 ? standard.chords[currentChordIndex] : null;
   const currentChordTargetPcs = useMemo(
@@ -157,20 +162,7 @@ export default function StandardsPractice() {
       <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <select
-              value={standardId}
-              onChange={(e) => {
-                if (isPlaying) handleStop();
-                setStandardId(e.target.value);
-              }}
-              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200"
-            >
-              {STANDARDS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.titleJa}
-                </option>
-              ))}
-            </select>
+            <ProgressionPicker onChange={handleStandardChange} />
             <p className="mt-2 max-w-md text-xs text-slate-500">{standard.descriptionJa}</p>
           </div>
           <div className="flex items-center gap-3">
