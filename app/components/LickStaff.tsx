@@ -22,6 +22,8 @@ const LINE_GAP = 12;
 const STAFF_TOP = 48; // y of the top staff line (F5)
 const LEFT_PAD = 62; // room for the clef
 const TOP_STEP = TREBLE_BOTTOM_STEP + 8; // F5 (top line) = E4 + 8 diatonic steps
+const PX_PER_EIGHTH = 24; // horizontal spacing is proportional to time, so barlines line up
+const EIGHTHS_PER_MEASURE = 8; // 4/4 time, our durations are in eighth-note units
 
 function chordForSlot(slot: LickChordSlot, keyRoot: PitchClass): string {
   if (slot === "ii") return chordSymbol({ root: pc(keyRoot + 2), quality: "min7" });
@@ -32,14 +34,25 @@ function chordForSlot(slot: LickChordSlot, keyRoot: PitchClass): string {
 export function LickStaff({ notes, keyRoot, currentIndex = -1, states }: LickStaffProps) {
   const preferFlat = preferFlatForKey(keyRoot);
 
+  // Horizontal position is proportional to elapsed time (in eighth-note
+  // units) rather than a fixed per-note increment, so measure barlines land
+  // exactly where they musically belong.
+  const timeToX = (eighths: number) => LEFT_PAD + eighths * PX_PER_EIGHTH;
+
   const layout = useMemo(() => {
-    let x = LEFT_PAD;
+    let cursor = 0;
     const xs = notes.map((n) => {
-      const cur = x;
-      x += 26 + n.dur * 5;
-      return cur;
+      const x = timeToX(cursor);
+      cursor += n.dur;
+      return x;
     });
-    return { xs, width: x + 24 };
+    const totalEighths = cursor;
+    const barlines: number[] = [];
+    for (let m = EIGHTHS_PER_MEASURE; m < totalEighths; m += EIGHTHS_PER_MEASURE) {
+      barlines.push(timeToX(m));
+    }
+    const endX = timeToX(totalEighths);
+    return { xs, barlines, endX, width: endX + 24 };
   }, [notes]);
 
   const yForStep = (step: number) => STAFF_TOP + (TOP_STEP - step) * (LINE_GAP / 2);
@@ -79,8 +92,15 @@ export function LickStaff({ notes, keyRoot, currentIndex = -1, states }: LickSta
       <svg width={layout.width} height={height} style={{ minWidth: layout.width }} className="block">
         {/* staff lines */}
         {staffLineYs.map((y, i) => (
-          <line key={i} x1={20} y1={y} x2={layout.width - 10} y2={y} stroke="#475569" strokeWidth={1} />
+          <line key={i} x1={20} y1={y} x2={layout.endX} y2={y} stroke="#475569" strokeWidth={1} />
         ))}
+        {/* measure barlines */}
+        {layout.barlines.map((x, i) => (
+          <line key={`bar-${i}`} x1={x} y1={STAFF_TOP} x2={x} y2={bottomLineY} stroke="#475569" strokeWidth={1} />
+        ))}
+        {/* final double barline */}
+        <line x1={layout.endX - 5} y1={STAFF_TOP} x2={layout.endX - 5} y2={bottomLineY} stroke="#475569" strokeWidth={1} />
+        <line x1={layout.endX} y1={STAFF_TOP} x2={layout.endX} y2={bottomLineY} stroke="#475569" strokeWidth={2.5} />
         {/* treble clef */}
         <text x={24} y={bottomLineY + 6} fontSize={54} fill="#1e293b" fontFamily="serif">
           𝄞

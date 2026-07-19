@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type * as ToneNS from "tone";
 import { useMidiContext } from "~/lib/context/MidiProvider";
+import { loadTone } from "~/lib/tone";
 
 /**
  * Makes every note-on/note-off event (real MIDI hardware AND the on-screen
@@ -21,29 +22,16 @@ export function useLiveMidiAudio() {
 
   useEffect(() => {
     let cancelled = false;
-    import("tone").then((Tone) => {
+    loadTone().then((Tone) => {
       if (cancelled) return;
       toneRef.current = Tone;
-      // Minimize software latency. Browsers can't reach ASIO/CoreAudio
-      // exclusive modes, but two Web Audio levers help a lot for live play:
-      //  - latencyHint "interactive" asks the OS for the smallest safe
-      //    output buffer.
-      //  - lookAhead 0 removes Tone's default 100ms scheduler look-ahead so
-      //    notes triggered "now" fire immediately instead of being queued.
-      const ctx = Tone.getContext();
-      ctx.lookAhead = 0;
-      try {
-        ctx.latencyHint = "interactive";
-      } catch {
-        // Some browsers only accept latencyHint at context construction; ignore.
-      }
       const synth = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "triangle8" },
         envelope: { attack: 0.004, decay: 0.15, sustain: 0.6, release: 0.5 },
       }).toDestination();
       synth.volume.value = -8;
       synthRef.current = synth;
-      setAudioEnabled(ctx.state === "running");
+      setAudioEnabled(Tone.getContext().state === "running");
     });
     return () => {
       cancelled = true;
@@ -70,7 +58,7 @@ export function useLiveMidiAudio() {
   }, [subscribe]);
 
   const enableAudio = useCallback(async () => {
-    const Tone = toneRef.current ?? (await import("tone"));
+    const Tone = toneRef.current ?? (await loadTone());
     toneRef.current = Tone;
     await Tone.start();
     setAudioEnabled(true);

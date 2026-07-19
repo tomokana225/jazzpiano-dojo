@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type * as ToneNS from "tone";
+import { loadTone } from "~/lib/tone";
 
 type Tone = typeof ToneNS;
 
@@ -15,7 +16,7 @@ export function useNotePlayer() {
 
   const ensure = useCallback(async () => {
     if (synthRef.current) return { Tone: toneRef.current as Tone, synth: synthRef.current };
-    const Tone = await import("tone");
+    const Tone = await loadTone();
     await Tone.start();
     const synth = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: "triangle8" },

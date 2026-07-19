@@ -3,6 +3,7 @@ import type * as ToneNS from "tone";
 import { chordTones } from "~/lib/theory/chords";
 import { nearestMidiForPitchClass, pc } from "~/lib/theory/notes";
 import type { Standard, StandardChord } from "~/lib/theory/standards";
+import { loadTone } from "~/lib/tone";
 
 type Tone = typeof ToneNS;
 
@@ -43,7 +44,7 @@ export function useBackingTrack(
   const start = useCallback(
     async (standard: Standard, bpm: number) => {
       stop();
-      const Tone = await import("tone");
+      const Tone = await loadTone();
       toneRef.current = Tone;
       await Tone.start();
 
