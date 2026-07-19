@@ -18,6 +18,8 @@ export interface PianoKeyboardProps {
   targetPitchClasses?: Set<number>;
   /** Softer "for reference" highlight (e.g. the full scale shape) shown under the goal highlight. */
   referencePitchClasses?: Set<number>;
+  /** Softer "for reference" highlight for specific exact MIDI notes (e.g. a simulated bass root) — not graded as correct/wrong. */
+  referenceMidiNotes?: Set<number>;
   /** Optional degree label (e.g. "b9", "13") printed on specific target keys, keyed by exact MIDI note. */
   noteLabels?: Map<number, string>;
   onNoteDown?: (midi: number) => void;
@@ -34,6 +36,7 @@ export function PianoKeyboard({
   targetMidiNotes,
   targetPitchClasses,
   referencePitchClasses,
+  referenceMidiNotes,
   noteLabels,
   onNoteDown,
   onNoteUp,
@@ -60,7 +63,9 @@ export function PianoKeyboard({
   }
 
   function isReference(midi: number): boolean {
-    return referencePitchClasses?.has(pc(midi)) ?? false;
+    if (referencePitchClasses?.has(pc(midi))) return true;
+    if (referenceMidiNotes?.has(midi)) return true;
+    return false;
   }
 
   function whiteFill(k: KeyGeom): string {

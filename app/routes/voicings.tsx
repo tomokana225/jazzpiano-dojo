@@ -19,7 +19,15 @@ import {
   type VoicingResult,
   type VoicingType,
 } from "~/lib/theory/voicings";
-import { CIRCLE_OF_FIFTHS, jazzRootName, pc, randomPitchClass, type PitchClass } from "~/lib/theory/notes";
+import {
+  CIRCLE_OF_FIFTHS,
+  jazzRootName,
+  nearestMidiForPitchClass,
+  pc,
+  randomPitchClass,
+  type Midi,
+  type PitchClass,
+} from "~/lib/theory/notes";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "ボイシング練習 - Jazz Piano Dojo" }];
@@ -27,13 +35,23 @@ export function meta({}: Route.MetaArgs) {
 
 const ANCHOR_MIDI = 60;
 const ALL_VOICING_TYPES = Object.keys(VOICING_TYPES) as VoicingType[];
-const KEYBOARD_LOW = 33;
+const KEYBOARD_LOW = 24;
 const KEYBOARD_HIGH = 88;
+// How far below the voicing's lowest note to place the simulated bass root
+// (rootless voicings omit the root entirely, and even non-rootless ones
+// benefit from hearing/seeing where a bassist would actually play it).
+const BASS_DROP = 14;
 
 /** Map each voicing note to its degree label (e.g. "b9", "13") for on-keyboard display. */
 function voicingNoteLabels(voicing: VoicingResult | null | undefined): Map<number, string> | undefined {
   if (!voicing) return undefined;
   return new Map(voicing.notes.map((n, i) => [n, voicing.degrees[i]]));
+}
+
+/** Where a bassist would play the root: comfortably below the voicing, in its own register. */
+function bassRootMidi(root: PitchClass, voicingNotes: Midi[]): Midi {
+  const lowest = voicingNotes.length > 0 ? Math.min(...voicingNotes) : ANCHOR_MIDI;
+  return nearestMidiForPitchClass(root, lowest - BASS_DROP);
 }
 
 /** How far (in semitones) the chase target may drift from the base anchor. Bounds the walk
@@ -140,11 +158,17 @@ function VoicingExplorer() {
     return raw && nudgeVoicingToRegister(raw, registerAnchor);
   }, [root, quality, voicingType, baseAnchor, registerAnchor]);
   useEffect(() => trackRegister(voicing), [voicing, trackRegister]);
+  const bassNote = useMemo(() => (voicing ? bassRootMidi(root, voicing.notes) : null), [root, voicing]);
+  const referenceMidiNotes = useMemo(
+    () => (bassNote !== null ? new Set([bassNote]) : undefined),
+    [bassNote],
+  );
   const targetMidiNotes = useMemo(() => new Set(voicing?.notes ?? []), [voicing]);
   const noteLabels = useMemo(() => voicingNoteLabels(voicing), [voicing]);
 
   function playPreview() {
-    if (voicing) player.playChord(voicing.notes);
+    if (!voicing) return;
+    player.playChord(bassNote !== null ? [bassNote, ...voicing.notes] : voicing.notes);
   }
 
   return (
@@ -209,13 +233,14 @@ function VoicingExplorer() {
       </div>
 
       <p className="text-xs text-slate-500">
-        ハイライトされた鍵盤がこのボイシングの構成音です(オクターブも指定通り)。実際に弾いてみましょう — 合っていれば緑、違う音は赤になります。鍵盤上の数字はルートから見た度数です。
+        ハイライトされた鍵盤がこのボイシングの構成音です(オクターブも指定通り)。実際に弾いてみましょう — 合っていれば緑、違う音は赤になります。鍵盤上の数字はルートから見た度数です。左端の低い鍵盤(薄い色)はベーシストが弾くルート音の参考位置です。
       </p>
       <PianoKeyboard
         lowMidi={KEYBOARD_LOW}
         highMidi={KEYBOARD_HIGH}
         activeNotes={activeNotes}
         targetMidiNotes={targetMidiNotes}
+        referenceMidiNotes={referenceMidiNotes}
         noteLabels={noteLabels}
         onNoteDown={pressNote}
         onNoteUp={releaseNote}
@@ -272,7 +297,14 @@ function VoicingQuizTrainer() {
     return raw && nudgeVoicingToRegister(raw, registerAnchor);
   }, [round.root, round.quality, round.voicingType, baseAnchor, registerAnchor]);
   useEffect(() => trackRegister(voicing), [voicing, trackRegister]);
-  const targetMidiNotes = useMemo(() => new Set(voicing?.notes ?? []), [voicing]);
+  const bassNote = useMemo(() => (voicing ? bassRootMidi(round.root, voicing.notes) : null), [round.root, voicing]);
+  const referenceMidiNotes = useMemo(
+    () => (bassNote !== null ? new Set([bassNote]) : undefined),
+    [bassNote],
+  );
+  // Matching only requires the voicing itself — the bass root is shown/heard
+  // as context (what a bassist would play) but isn't graded.
+  const matchNotes = useMemo(() => new Set(voicing?.notes ?? []), [voicing]);
   const noteLabels = useMemo(() => voicingNoteLabels(voicing), [voicing]);
 
   const nextRound = useCallback(() => {
@@ -298,13 +330,14 @@ function VoicingQuizTrainer() {
   useEffect(() => {
     if (phase !== "playing" || !voicing) return;
     if (activeNotes.size === 0) return;
-    if (activeNotes.size !== targetMidiNotes.size) return;
-    const matches = [...activeNotes].every((n) => targetMidiNotes.has(n));
+    if (activeNotes.size !== matchNotes.size) return;
+    const matches = [...activeNotes].every((n) => matchNotes.has(n));
     if (matches) finishRound(true);
-  }, [activeNotes, targetMidiNotes, voicing, phase, finishRound]);
+  }, [activeNotes, matchNotes, voicing, phase, finishRound]);
 
   function playPreview() {
-    if (voicing) player.playChord(voicing.notes);
+    if (!voicing) return;
+    player.playChord(bassNote !== null ? [bassNote, ...voicing.notes] : voicing.notes);
   }
 
   if (!voicing) return null;
@@ -345,7 +378,8 @@ function VoicingQuizTrainer() {
         lowMidi={KEYBOARD_LOW}
         highMidi={KEYBOARD_HIGH}
         activeNotes={activeNotes}
-        targetMidiNotes={targetMidiNotes}
+        targetMidiNotes={matchNotes}
+        referenceMidiNotes={referenceMidiNotes}
         noteLabels={noteLabels}
         onNoteDown={pressNote}
         onNoteUp={releaseNote}
@@ -445,6 +479,13 @@ function VoicingIiViTrainer() {
     return raw && nudgeVoicingToRegister(raw, registerAnchor);
   }, [current, currentVoicingType, baseAnchor, registerAnchor]);
   useEffect(() => trackRegister(voicing), [voicing, trackRegister]);
+  const bassNote = useMemo(() => (voicing ? bassRootMidi(current.root, voicing.notes) : null), [current.root, voicing]);
+  const referenceMidiNotes = useMemo(
+    () => (bassNote !== null ? new Set([bassNote]) : undefined),
+    [bassNote],
+  );
+  // Matching only requires the voicing itself — the bass root is shown/heard
+  // as context (what a bassist would play) but isn't graded.
   const targetMidiNotes = useMemo(() => new Set(voicing?.notes ?? []), [voicing]);
   const noteLabels = useMemo(() => voicingNoteLabels(voicing), [voicing]);
 
@@ -487,7 +528,8 @@ function VoicingIiViTrainer() {
   }, [resetRegister]);
 
   function playPreview() {
-    if (voicing) player.playChord(voicing.notes);
+    if (!voicing) return;
+    player.playChord(bassNote !== null ? [bassNote, ...voicing.notes] : voicing.notes);
   }
 
   if (!voicing) return null;
@@ -606,6 +648,7 @@ function VoicingIiViTrainer() {
         highMidi={KEYBOARD_HIGH}
         activeNotes={activeNotes}
         targetMidiNotes={targetMidiNotes}
+        referenceMidiNotes={referenceMidiNotes}
         noteLabels={noteLabels}
         onNoteDown={pressNote}
         onNoteUp={releaseNote}
