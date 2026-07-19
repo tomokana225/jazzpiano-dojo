@@ -27,7 +27,7 @@ const MODES = [
     to: "/voicings",
     icon: "🎼",
     title: "ボイシング",
-    description: "シェル・ロートレスA/B・ドロップ2など実戦的な左手/両手ボイシングを正確に再現する。",
+    description: "シェル・ルートレスA/B・ドロップ2など実戦的な左手/両手ボイシングを正確に再現する。",
   },
   {
     to: "/ii-v-i",

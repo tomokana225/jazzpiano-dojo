@@ -44,7 +44,7 @@ export default function VoicingsPractice() {
       <div>
         <h1 className="text-xl font-bold">ボイシング練習</h1>
         <p className="mt-1 text-sm text-slate-400">
-          シェル・ロートレスA/B・ドロップ2など実戦的なボイシングを覚えましょう。
+          シェル・ルートレスA/B・ドロップ2など実戦的なボイシングを覚えましょう。
         </p>
       </div>
 
@@ -338,7 +338,7 @@ function VoicingQuizTrainer() {
 type IiViVoicingChoice = VoicingType | "rootlessAlt";
 
 const IIVI_VOICING_CHOICES: { id: IiViVoicingChoice; label: string }[] = [
-  { id: "rootlessAlt", label: "ロートレス A/B 交互 (実戦的な声部進行)" },
+  { id: "rootlessAlt", label: "ルートレス A/B 交互 (実戦的な声部進行)" },
   { id: "rootlessA", label: VOICING_TYPES.rootlessA.nameJa },
   { id: "rootlessB", label: VOICING_TYPES.rootlessB.nameJa },
   { id: "shell37", label: VOICING_TYPES.shell37.nameJa },
@@ -373,6 +373,7 @@ function VoicingIiViTrainer() {
   const player = useNotePlayer();
 
   const [choice, setChoice] = useState<IiViVoicingChoice>("rootlessAlt");
+  const [startVoicing, setStartVoicing] = useState<"rootlessA" | "rootlessB">("rootlessA");
   const [octaveShift, setOctaveShift] = useState(0);
   const [circleIndex, setCircleIndex] = useState(0);
   const [step, setStep] = useState(0); // 0 = ii, 1 = V, 2 = I
@@ -384,8 +385,9 @@ function VoicingIiViTrainer() {
   const slots = useMemo(() => iiViSlots(keyRoot), [keyRoot]);
   const current = slots[step];
   const globalChordIndex = circleIndex * 3 + step;
+  const startsWithA = startVoicing === "rootlessA";
   const currentVoicingType: VoicingType =
-    choice === "rootlessAlt" ? (globalChordIndex % 2 === 0 ? "rootlessA" : "rootlessB") : choice;
+    choice === "rootlessAlt" ? ((globalChordIndex % 2 === 0) === startsWithA ? "rootlessA" : "rootlessB") : choice;
 
   const anchorMidi = ANCHOR_MIDI + octaveShift * 12;
   const voicing = useMemo(
@@ -504,6 +506,25 @@ function VoicingIiViTrainer() {
               ))}
             </select>
           </div>
+          {choice === "rootlessAlt" && (
+            <div>
+              <p className="mb-1 text-xs text-slate-500">最初のコードをどちらで弾くか</p>
+              <div className="inline-flex rounded-lg border border-slate-700 bg-slate-900 p-1 text-xs">
+                {(["rootlessA", "rootlessB"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setStartVoicing(v)}
+                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                      startVoicing === v ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {v === "rootlessA" ? "A形から" : "B形から"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
             <p className="mb-1 text-xs text-slate-500">オクターブ位置</p>
             <OctaveShiftControl value={octaveShift} onChange={setOctaveShift} />

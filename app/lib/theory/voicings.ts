@@ -27,12 +27,12 @@ export const VOICING_TYPES: Record<VoicingType, VoicingDef> = {
   },
   rootlessA: {
     id: "rootlessA",
-    nameJa: "ロートレス・ボイシング A形",
+    nameJa: "ルートレス・ボイシング A形",
     descriptionJa: "ルートを省略し 3-5-7-9 (または 3-13-7-9) を積むビル・エヴァンス系ボイシング。",
   },
   rootlessB: {
     id: "rootlessB",
-    nameJa: "ロートレス・ボイシング B形",
+    nameJa: "ルートレス・ボイシング B形",
     descriptionJa: "A形を転回した 7-9-3-5 系のボイシング。A形と交互に使い滑らかに接続する。",
   },
   drop2: {
