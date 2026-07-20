@@ -3,7 +3,7 @@ import { Minus, Plus } from "lucide-react";
 export function OctaveShiftControl({
   value,
   onChange,
-  min = -1,
+  min = -2,
   max = 1,
 }: {
   value: number;
