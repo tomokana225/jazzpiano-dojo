@@ -37,18 +37,22 @@ function chordForSlot(slot: LickChordSlot, keyRoot: PitchClass): string {
   return chordSymbol({ root: keyRoot, quality: "maj7" });
 }
 
+/** An eighth-note triplet: 3 notes in the space normally taken by 2 eighths. */
+const TRIPLET_EIGHTH = 2 / 3;
+
 /** How a duration (in eighth-note units) should be notated. */
-function noteValueInfo(dur: number): { flags: number; dotted: boolean; open: boolean } {
-  if (dur >= 8) return { flags: 0, dotted: false, open: true }; // whole
-  if (dur === 6) return { flags: 0, dotted: true, open: true }; // dotted half
-  if (dur === 4) return { flags: 0, dotted: false, open: true }; // half
-  if (dur === 3) return { flags: 0, dotted: true, open: false }; // dotted quarter
-  if (dur === 2) return { flags: 0, dotted: false, open: false }; // quarter
-  if (dur === 1.5) return { flags: 1, dotted: true, open: false }; // dotted eighth
-  if (dur === 1) return { flags: 1, dotted: false, open: false }; // eighth
-  if (dur === 0.75) return { flags: 2, dotted: true, open: false }; // dotted sixteenth
-  if (dur === 0.5) return { flags: 2, dotted: false, open: false }; // sixteenth
-  return { flags: 0, dotted: false, open: dur >= 4 };
+function noteValueInfo(dur: number): { flags: number; dotted: boolean; open: boolean; triplet: boolean } {
+  if (dur >= 8) return { flags: 0, dotted: false, open: true, triplet: false }; // whole
+  if (dur === 6) return { flags: 0, dotted: true, open: true, triplet: false }; // dotted half
+  if (dur === 4) return { flags: 0, dotted: false, open: true, triplet: false }; // half
+  if (dur === 3) return { flags: 0, dotted: true, open: false, triplet: false }; // dotted quarter
+  if (dur === 2) return { flags: 0, dotted: false, open: false, triplet: false }; // quarter
+  if (dur === 1.5) return { flags: 1, dotted: true, open: false, triplet: false }; // dotted eighth
+  if (dur === 1) return { flags: 1, dotted: false, open: false, triplet: false }; // eighth
+  if (dur === TRIPLET_EIGHTH) return { flags: 1, dotted: false, open: false, triplet: true }; // triplet eighth
+  if (dur === 0.75) return { flags: 2, dotted: true, open: false, triplet: false }; // dotted sixteenth
+  if (dur === 0.5) return { flags: 2, dotted: false, open: false, triplet: false }; // sixteenth
+  return { flags: 0, dotted: false, open: dur >= 4, triplet: false };
 }
 
 interface RenderNote {
@@ -60,6 +64,16 @@ interface RenderNote {
   tiedFromPrev: boolean;
   tiedToNext: boolean;
 }
+
+// All supported durations (including eighth-note triplets, dur = 2/3) are
+// exact multiples of 1/12 of an eighth note. Snapping every accumulated
+// position to that grid absorbs the floating-point drift that repeated
+// additions of 2/3 would otherwise introduce — left unsnapped, a position
+// that should land exactly on a barline (e.g. 16) can come out as
+// 15.999999999999996, which throws off the modulo-based measure/beat math
+// downstream (a near-zero sliver gets split off before the "barline").
+const POSITION_GRID = 12;
+const snapToGrid = (x: number) => Math.round(x * POSITION_GRID) / POSITION_GRID;
 
 /**
  * Split any note whose duration would cross a measure boundary into tied
@@ -74,7 +88,7 @@ function splitAcrossBarlines(notes: StaffNote[]): RenderNote[] {
     let remaining = n.dur;
     let start = cursor;
     let first = true;
-    while (remaining > 0) {
+    while (remaining > 1e-9) {
       const posInMeasure = start % EIGHTHS_PER_MEASURE;
       const roomInMeasure = EIGHTHS_PER_MEASURE - posInMeasure;
       const segDur = Math.min(remaining, roomInMeasure);
@@ -88,11 +102,11 @@ function splitAcrossBarlines(notes: StaffNote[]): RenderNote[] {
         tiedFromPrev: !first,
         tiedToNext,
       });
-      start += segDur;
+      start = snapToGrid(start + segDur);
       remaining -= segDur;
       first = false;
     }
-    cursor += n.dur;
+    cursor = snapToGrid(cursor + n.dur);
   });
   return result;
 }
@@ -242,6 +256,7 @@ export function LickStaff({ notes, keyRoot, currentIndex = -1, states }: LickSta
           const x2 = stemUp ? members[members.length - 1].x + 6 : members[members.length - 1].x - 6;
           const st = states?.[members[0].originalIndex];
           const color = st === "hit" ? "#16a34a" : st === "miss" ? "#dc2626" : "#0f172a";
+          const isTriplet = members.length === 3 && members.every((n) => noteValueInfo(n.dur).triplet);
           return (
             <g key={`beam-${gi}`}>
               {members.map((n) => (
@@ -266,6 +281,18 @@ export function LickStaff({ notes, keyRoot, currentIndex = -1, states }: LickSta
                   strokeWidth={4}
                 />
               ))}
+              {isTriplet && (
+                <text
+                  x={(x1 + x2) / 2}
+                  y={beamY + (stemUp ? -6 : 14)}
+                  fontSize={11}
+                  fontStyle="italic"
+                  textAnchor="middle"
+                  fill={color}
+                >
+                  3
+                </text>
+              )}
             </g>
           );
         })}
