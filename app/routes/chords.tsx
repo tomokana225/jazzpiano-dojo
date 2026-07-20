@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { SkipForward, Volume2 } from "lucide-react";
 import type { Route } from "./+types/chords";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
+import { RootPicker } from "~/components/RootPicker";
 import { ScoreHud } from "~/components/ScoreHud";
 import { FeedbackBanner, type FeedbackKind } from "~/components/FeedbackBanner";
 import { MultiSelectChips } from "~/components/MultiSelectChips";
@@ -21,11 +22,148 @@ import {
   type ChordQualityId,
 } from "~/lib/theory/chords";
 import { closeVoicingMidi } from "~/lib/theory/voicings";
-import { pc, randomPitchClass, type PitchClass } from "~/lib/theory/notes";
+import { jazzRootName, pc, randomPitchClass, type PitchClass } from "~/lib/theory/notes";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "コード練習 - Jazz Piano Dojo" }];
 }
+
+const ALL_CHORD_QUALITIES = Object.keys(CHORD_QUALITIES) as ChordQualityId[];
+
+type Mode = "explore" | "quiz";
+
+const MODE_TABS: { id: Mode; label: string }[] = [
+  { id: "explore", label: "コードを選んで表示" },
+  { id: "quiz", label: "クイズ" },
+];
+
+export default function ChordsPractice() {
+  const [mode, setMode] = useState<Mode>("explore");
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold">コード練習</h1>
+        <p className="mt-1 text-sm text-slate-400">
+          コードネームを選んで鍵盤上の構成音を確認したり、クイズ形式で覚えたコードを試したりできます。
+        </p>
+      </div>
+
+      <div className="inline-flex flex-wrap rounded-full border border-slate-800 bg-slate-900/60 p-1 text-xs">
+        {MODE_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setMode(tab.id)}
+            className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
+              mode === tab.id ? "bg-brass-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "explore" && <ChordExplorer />}
+      {mode === "quiz" && <ChordQuizTrainer />}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Explore mode (default): pick a root + chord quality and see it laid out on
+// the keyboard at your own pace — no quiz, no timer.
+// ---------------------------------------------------------------------------
+
+const EXPLORE_LOW = 48;
+const EXPLORE_HIGH = 72;
+
+/** Degree label ("R", "b3", "5"...) for every occurrence of the chord's tones across the visible keyboard range. */
+function chordNoteLabels(root: PitchClass, quality: ChordQualityId, lowMidi: number, highMidi: number): Map<number, string> {
+  const q = CHORD_QUALITIES[quality];
+  const degreeByOffset = new Map(q.intervals.map((interval, idx) => [pc(root + interval), q.degrees[idx]]));
+  const map = new Map<number, string>();
+  for (let midi = lowMidi; midi <= highMidi; midi++) {
+    const label = degreeByOffset.get(pc(midi));
+    if (label !== undefined) map.set(midi, label);
+  }
+  return map;
+}
+
+function ChordExplorer() {
+  const { activeNotes, pressNote, releaseNote } = useMidiContext();
+  const player = useNotePlayer();
+  const [root, setRoot] = useState<PitchClass>(0);
+  const [quality, setQuality] = useState<ChordQualityId>("maj7");
+
+  const spec = { root, quality };
+  const targetPitchClasses = useMemo(() => new Set(chordTones(spec)), [root, quality]);
+  const degrees = useMemo(() => chordToneDegrees(spec), [root, quality]);
+  const noteLabels = useMemo(() => chordNoteLabels(root, quality, EXPLORE_LOW, EXPLORE_HIGH), [root, quality]);
+
+  function playPreview() {
+    player.playChord(closeVoicingMidi(root, CHORD_QUALITIES[quality].intervals, 60));
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div>
+            <p className="mb-2 text-xs text-slate-500">ルート</p>
+            <RootPicker value={root} onChange={setRoot} />
+          </div>
+          <div>
+            <p className="mb-2 text-xs text-slate-500">コードクオリティ</p>
+            <select
+              value={quality}
+              onChange={(e) => setQuality(e.target.value as ChordQualityId)}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200"
+            >
+              {ALL_CHORD_QUALITIES.map((q) => (
+                <option key={q} value={q}>
+                  {CHORD_QUALITIES[q].labelJa} ({CHORD_QUALITIES[q].suffix || "triad"})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-6 text-center">
+          <p className="text-xs uppercase tracking-widest text-slate-500">Selected Chord</p>
+          <p className="mt-2 text-4xl font-bold tracking-tight text-brass-300">
+            {jazzRootName(root)}{CHORD_QUALITIES[quality].suffix}
+          </p>
+          <p className="mt-1 text-sm text-slate-400">{CHORD_QUALITIES[quality].labelJa}</p>
+          <p className="mt-3 text-sm text-slate-300">構成音: {degrees.map((d) => d.degree).join(" - ")}</p>
+          <Button
+            onClick={playPreview}
+            className="mt-4"
+            icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}
+          >
+            音を聞く
+          </Button>
+        </div>
+      </Card>
+
+      <p className="text-xs text-slate-500">
+        ハイライトされた鍵盤がこのコードの構成音です。実際に弾いてみましょう — 合っていれば緑、違う音は赤になります。鍵盤上の数字はルートから見た度数です。
+      </p>
+      <PianoKeyboard
+        lowMidi={EXPLORE_LOW}
+        highMidi={EXPLORE_HIGH}
+        activeNotes={activeNotes}
+        targetPitchClasses={targetPitchClasses}
+        noteLabels={noteLabels}
+        onNoteDown={pressNote}
+        onNoteUp={releaseNote}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Quiz mode: random chord, matched by playing the exact tones.
+// ---------------------------------------------------------------------------
 
 const TIME_LIMITS = [0, 12000, 8000, 5000] as const;
 const TIME_LIMIT_LABELS: Record<number, string> = {
@@ -46,7 +184,7 @@ function randomRound(qualities: ChordQualityId[], prevId: number): Round {
   return { id: prevId + 1, root: randomPitchClass(), quality };
 }
 
-export default function ChordsPractice() {
+function ChordQuizTrainer() {
   const { activeNotes, pressNote, releaseNote } = useMidiContext();
   const { recordResult } = useProgressContext();
   const score = useRoundScore();
@@ -103,12 +241,9 @@ export default function ChordsPractice() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">コード練習</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          表示されたコードシンボルを、MIDIキーボード(または下の鍵盤クリック)でどのオクターブ・展開形でもよいので押さえてください。
-        </p>
-      </div>
+      <p className="text-sm text-slate-400">
+        表示されたコードシンボルを、MIDIキーボード(または下の鍵盤クリック)でどのオクターブ・展開形でもよいので押さえてください。
+      </p>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <ScoreHud correct={score.correct} total={score.total} streak={score.streak} bestStreak={score.bestStreak} />
