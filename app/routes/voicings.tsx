@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { RotateCcw, SkipForward, Volume2 } from "lucide-react";
 import type { Route } from "./+types/voicings";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
 import { RootPicker } from "~/components/RootPicker";
@@ -6,6 +7,8 @@ import { OctaveShiftControl } from "~/components/OctaveShiftControl";
 import { ScoreHud } from "~/components/ScoreHud";
 import { FeedbackBanner, type FeedbackKind } from "~/components/FeedbackBanner";
 import { MultiSelectChips } from "~/components/MultiSelectChips";
+import { Card } from "~/components/ui/Card";
+import { Button } from "~/components/ui/Button";
 import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
@@ -118,7 +121,7 @@ export default function VoicingsPractice() {
             type="button"
             onClick={() => setMode(tab.id)}
             className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
-              mode === tab.id ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
+              mode === tab.id ? "bg-brass-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
             }`}
           >
             {tab.label}
@@ -173,7 +176,7 @@ function VoicingExplorer() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+      <Card className="p-6">
         <div className="grid gap-6 sm:grid-cols-3">
           <div>
             <p className="mb-2 text-xs text-slate-500">ルート</p>
@@ -217,20 +220,20 @@ function VoicingExplorer() {
         {voicing && (
           <div className="mt-6 text-center">
             <p className="text-xs uppercase tracking-widest text-slate-500">Selected Voicing</p>
-            <p className="mt-2 text-3xl font-bold text-amber-300">{chordSymbol({ root, quality })}</p>
+            <p className="mt-2 text-3xl font-bold tracking-tight text-brass-300">{chordSymbol({ root, quality })}</p>
             <p className="mt-1 text-sm text-slate-300">{VOICING_TYPES[voicingType].nameJa}</p>
             <p className="mx-auto mt-2 max-w-md text-xs text-slate-500">{VOICING_TYPES[voicingType].descriptionJa}</p>
             <p className="mt-3 text-sm text-slate-400">構成音(下から): {voicing.degrees.join(" - ")}</p>
-            <button
-              type="button"
+            <Button
               onClick={playPreview}
-              className="mt-4 rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300"
+              className="mt-4"
+              icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}
             >
-              🔊 音を聞く
-            </button>
+              音を聞く
+            </Button>
           </div>
         )}
-      </div>
+      </Card>
 
       <p className="text-xs text-slate-500">
         ハイライトされた鍵盤がこのボイシングの構成音です(オクターブも指定通り)。実際に弾いてみましょう — 合っていれば緑、違う音は赤になります。鍵盤上の数字はルートから見た度数です。左端の低い鍵盤(薄い色)はベーシストが弾くルート音の参考位置です。
@@ -349,30 +352,22 @@ function VoicingQuizTrainer() {
         <FeedbackBanner kind={feedback} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center">
+      <Card className="p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-slate-500">Target Voicing</p>
-        <p className="mt-2 text-4xl font-bold text-amber-300">{chordSymbol(round)}</p>
+        <p className="mt-2 text-4xl font-bold tracking-tight text-brass-300">{chordSymbol(round)}</p>
         <p className="mt-1 text-sm text-slate-300">{VOICING_TYPES[round.voicingType].nameJa}</p>
         <p className="mx-auto mt-2 max-w-md text-xs text-slate-500">{VOICING_TYPES[round.voicingType].descriptionJa}</p>
         <p className="mt-3 text-sm text-slate-400">構成音(下から): {voicing.degrees.join(" - ")}</p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={playPreview}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300"
-          >
-            🔊 音を聞く
-          </button>
-          <button
-            type="button"
-            onClick={nextRound}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-slate-500"
-          >
-            ⏭ スキップ
-          </button>
+          <Button onClick={playPreview} icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            音を聞く
+          </Button>
+          <Button onClick={nextRound} icon={<SkipForward className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            スキップ
+          </Button>
           <OctaveShiftControl value={octaveShift} onChange={setOctaveShift} />
         </div>
-      </div>
+      </Card>
 
       <PianoKeyboard
         lowMidi={KEYBOARD_LOW}
@@ -438,7 +433,7 @@ interface IiViSlot {
 const IIVI_SLOT_COLOR: Record<IiViSlot["label"], string> = {
   ii: "text-sky-300",
   V: "text-fuchsia-300",
-  I: "text-amber-300",
+  I: "text-brass-300",
 };
 
 function iiViSlots(keyRoot: PitchClass): IiViSlot[] {
@@ -551,7 +546,7 @@ function VoicingIiViTrainer() {
             key={i}
             className={`flex h-8 min-w-8 items-center justify-center rounded-md border px-1.5 text-xs font-semibold ${
               i === circleIndex
-                ? "border-amber-400 bg-amber-400/20 text-amber-300 scale-110"
+                ? "border-brass-400 bg-brass-400/20 text-brass-300 scale-110"
                 : i < circleIndex
                 ? "border-emerald-700 bg-emerald-400/5 text-emerald-500"
                 : "border-slate-700 text-slate-500"
@@ -563,7 +558,7 @@ function VoicingIiViTrainer() {
       </div>
       <p className="text-center text-xs text-slate-500">周回数: {laps}</p>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center">
+      <Card className="p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-slate-500">Key of {jazzRootName(keyRoot)}</p>
         <div className="mt-3 flex justify-center gap-3">
           {slots.map((s, i) => (
@@ -571,7 +566,7 @@ function VoicingIiViTrainer() {
               key={s.label}
               className={`flex h-10 min-w-16 items-center justify-center rounded-lg border px-2 text-sm font-semibold ${IIVI_SLOT_COLOR[s.label]} ${
                 i === step
-                  ? "border-amber-400 bg-amber-400/20 scale-110"
+                  ? "border-brass-400 bg-brass-400/20 scale-110"
                   : i < step
                   ? "border-emerald-600 bg-emerald-400/10"
                   : "border-slate-700 bg-slate-800/60"
@@ -581,7 +576,7 @@ function VoicingIiViTrainer() {
             </span>
           ))}
         </div>
-        <p className="mt-4 text-3xl font-bold text-amber-300">{chordSymbol(current)}</p>
+        <p className="mt-4 text-3xl font-bold tracking-tight text-brass-300">{chordSymbol(current)}</p>
         <p className="mt-1 text-sm text-slate-300">{VOICING_TYPES[currentVoicingType].nameJa}</p>
         <p className="mt-3 text-sm text-slate-400">構成音(下から): {voicing.degrees.join(" - ")}</p>
 
@@ -610,7 +605,7 @@ function VoicingIiViTrainer() {
                     type="button"
                     onClick={() => setStartVoicing(v)}
                     className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                      startVoicing === v ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
+                      startVoicing === v ? "bg-brass-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
                     }`}
                   >
                     {v === "rootlessA" ? "A形から" : "B形から"}
@@ -626,22 +621,14 @@ function VoicingIiViTrainer() {
         </div>
 
         <div className="mt-4 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={playPreview}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300"
-          >
-            🔊 音を聞く
-          </button>
-          <button
-            type="button"
-            onClick={resetCycle}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-slate-500"
-          >
-            🔁 Cから最初へ
-          </button>
+          <Button onClick={playPreview} icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            音を聞く
+          </Button>
+          <Button onClick={resetCycle} icon={<RotateCcw className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            Cから最初へ
+          </Button>
         </div>
-      </div>
+      </Card>
 
       <PianoKeyboard
         lowMidi={KEYBOARD_LOW}

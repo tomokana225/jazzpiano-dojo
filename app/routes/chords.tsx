@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SkipForward, Volume2 } from "lucide-react";
 import type { Route } from "./+types/chords";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
 import { ScoreHud } from "~/components/ScoreHud";
 import { FeedbackBanner, type FeedbackKind } from "~/components/FeedbackBanner";
 import { MultiSelectChips } from "~/components/MultiSelectChips";
+import { Card } from "~/components/ui/Card";
+import { Button } from "~/components/ui/Button";
 import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
@@ -112,37 +115,29 @@ export default function ChordsPractice() {
         <FeedbackBanner kind={feedback} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center">
+      <Card className="p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-slate-500">Target Chord</p>
-        <p className="mt-2 text-5xl font-bold text-amber-300">{chordSymbol(spec)}</p>
+        <p className="mt-2 text-5xl font-bold tracking-tight text-brass-300">{chordSymbol(spec)}</p>
         <p className="mt-2 text-sm text-slate-400">
           {CHORD_QUALITIES[round.quality].labelJa} ・ 構成音: {degrees.map((d) => d.degree).join(" - ")}
         </p>
         <div className="mt-4 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={playPreview}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300"
-          >
-            🔊 音を聞く
-          </button>
-          <button
-            type="button"
-            onClick={nextRound}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-slate-500"
-          >
-            ⏭ スキップ
-          </button>
+          <Button onClick={playPreview} icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            音を聞く
+          </Button>
+          <Button onClick={nextRound} icon={<SkipForward className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            スキップ
+          </Button>
         </div>
         {timeLimitMs > 0 && phase === "playing" && (
           <div className="mx-auto mt-4 h-1.5 w-48 overflow-hidden rounded-full bg-slate-800">
             <div
-              className="h-full bg-amber-400 transition-[width] duration-100 linear"
+              className="h-full bg-brass-400 transition-[width] duration-100 linear"
               style={{ width: `${(remainingMs / timeLimitMs) * 100}%` }}
             />
           </div>
         )}
-      </div>
+      </Card>
 
       <PianoKeyboard
         lowMidi={48}
@@ -175,7 +170,7 @@ export default function ChordsPractice() {
                   onClick={() => setTimeLimitMs(ms)}
                   className={`rounded-full border px-3 py-1 text-xs ${
                     timeLimitMs === ms
-                      ? "border-amber-400 bg-amber-400/10 text-amber-300"
+                      ? "border-brass-400 bg-brass-400/10 text-brass-300"
                       : "border-slate-700 text-slate-400 hover:border-slate-500"
                   }`}
                 >

@@ -10,7 +10,7 @@ export function RootPicker({ value, onChange }: { value: PitchClass; onChange: (
           onClick={() => onChange(root)}
           className={`flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-semibold transition-colors ${
             value === root
-              ? "border-amber-400 bg-amber-400/15 text-amber-300"
+              ? "border-brass-400 bg-brass-400/15 text-brass-300"
               : "border-slate-700 text-slate-300 hover:border-slate-500"
           }`}
         >

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PartyPopper, RotateCcw } from "lucide-react";
 import type { Route } from "./+types/identify";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
+import { Card } from "~/components/ui/Card";
+import { Button } from "~/components/ui/Button";
 import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { chordSymbol } from "~/lib/theory/chords";
@@ -30,7 +33,7 @@ export default function IdentifyPractice() {
           type="button"
           onClick={() => setMode("chords")}
           className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
-            mode === "chords" ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
+            mode === "chords" ? "bg-brass-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           コード当て
@@ -39,7 +42,7 @@ export default function IdentifyPractice() {
           type="button"
           onClick={() => setMode("scales")}
           className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
-            mode === "scales" ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
+            mode === "scales" ? "bg-brass-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           スケール当て
@@ -54,8 +57,9 @@ export default function IdentifyPractice() {
 function DiscoveryToast({ text }: { text: string | null }) {
   if (!text) return <div className="h-9" />;
   return (
-    <div className="flex h-9 items-center gap-2 rounded-lg bg-emerald-400/15 px-3 text-sm font-semibold text-emerald-300">
-      🎉 {text}
+    <div className="flex h-9 items-center gap-1.5 rounded-lg bg-emerald-400/15 px-3 text-sm font-semibold text-emerald-300">
+      <PartyPopper className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+      {text}
     </div>
   );
 }
@@ -89,21 +93,21 @@ function ChordIdentifyTrainer() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-300">
           <span className="mr-1.5 text-slate-500">発見したコード</span>
-          <span className="font-semibold text-amber-300">{discovered.size}</span>
+          <span className="font-semibold text-brass-300">{discovered.size}</span>
         </div>
         <DiscoveryToast text={toast} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center">
+      <Card className="p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-slate-500">Now Holding</p>
         <p className="mt-2 min-h-10 text-lg text-slate-300">
           {heldPitchClasses.size > 0 ? [...heldPitchClasses].map((p) => jazzRootName(p)).join(" - ") : "鍵盤で3和音以上を弾いてください"}
         </p>
         <p className="mt-3 text-xs uppercase tracking-widest text-slate-500">Recognized As</p>
-        <p className="mt-2 text-4xl font-bold text-amber-300">
+        <p className="mt-2 text-4xl font-bold text-brass-300">
           {symbols.length > 0 ? symbols.join(" / ") : heldPitchClasses.size >= 3 ? "認識できるコードがありません" : "—"}
         </p>
-      </div>
+      </Card>
 
       <PianoKeyboard lowMidi={41} highMidi={79} activeNotes={activeNotes} onNoteDown={pressNote} onNoteUp={releaseNote} />
 
@@ -173,12 +177,12 @@ function ScaleIdentifyTrainer() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-300">
           <span className="mr-1.5 text-slate-500">発見したスケール</span>
-          <span className="font-semibold text-amber-300">{discovered.size}</span>
+          <span className="font-semibold text-brass-300">{discovered.size}</span>
         </div>
         <DiscoveryToast text={toast} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center">
+      <Card className="p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-slate-500">
           {root !== null ? `ルート: ${jazzRootName(root)}` : "最初に弾いた音がルートになります"}
         </p>
@@ -187,7 +191,7 @@ function ScaleIdentifyTrainer() {
         </p>
 
         {exactMatches.length > 0 ? (
-          <p className="mt-3 text-3xl font-bold text-amber-300">{matchLabels.join(" / ")}</p>
+          <p className="mt-3 text-3xl font-bold text-brass-300">{matchLabels.join(" / ")}</p>
         ) : (
           <p className="mt-3 text-sm text-slate-500">
             {playedSequence.length === 0
@@ -197,15 +201,11 @@ function ScaleIdentifyTrainer() {
         )}
 
         <div className="mt-4">
-          <button
-            type="button"
-            onClick={reset}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-slate-500"
-          >
-            🔄 リセット
-          </button>
+          <Button onClick={reset} icon={<RotateCcw className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            リセット
+          </Button>
         </div>
-      </div>
+      </Card>
 
       <PianoKeyboard
         lowMidi={41}

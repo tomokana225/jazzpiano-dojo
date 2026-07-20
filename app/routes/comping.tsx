@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
+import { Play, Square } from "lucide-react";
 import type { Route } from "./+types/comping";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
 import { ScoreHud } from "~/components/ScoreHud";
 import { FeedbackBanner, type FeedbackKind } from "~/components/FeedbackBanner";
 import { ProgressionPicker } from "~/components/ProgressionPicker";
+import { Card } from "~/components/ui/Card";
+import { Button } from "~/components/ui/Button";
 import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
@@ -75,7 +78,7 @@ export default function CompingTrainer() {
         <FeedbackBanner kind={feedback} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+      <Card className="p-6">
         <ProgressionPicker onChange={handleStandardChange} disabled={busy} />
         <p className="mt-2 max-w-md text-xs text-slate-500">{standard.descriptionJa}</p>
 
@@ -88,7 +91,7 @@ export default function CompingTrainer() {
               disabled={busy}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 rhythmId === id
-                  ? "border-amber-400 bg-amber-400/15 text-amber-300"
+                  ? "border-brass-400 bg-brass-400/15 text-brass-300"
                   : "border-slate-700 text-slate-400 hover:border-slate-500"
               }`}
             >
@@ -109,25 +112,21 @@ export default function CompingTrainer() {
               value={bpm}
               disabled={busy}
               onChange={(e) => setBpm(Number(e.target.value))}
-              className="w-28 accent-amber-400"
+              className="w-28 accent-brass-400"
             />
           </label>
-          <button
-            type="button"
+          <Button
+            variant="primary"
             onClick={startRun}
             disabled={busy}
-            className="rounded-full bg-amber-400 px-5 py-1.5 text-xs font-semibold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
+            icon={<Play className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />}
           >
-            {phase === "countIn" ? "カウントイン中…" : phase === "playing" ? "演奏中…" : "▶ スタート"}
-          </button>
+            {phase === "countIn" ? "カウントイン中…" : phase === "playing" ? "演奏中…" : "スタート"}
+          </Button>
           {busy && (
-            <button
-              type="button"
-              onClick={stop}
-              className="rounded-full border border-red-500/60 px-4 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10"
-            >
-              ■ 停止
-            </button>
+            <Button variant="danger" onClick={stop} icon={<Square className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />}>
+              停止
+            </Button>
           )}
         </div>
 
@@ -141,7 +140,7 @@ export default function CompingTrainer() {
                   key={idx}
                   className={`flex h-9 min-w-9 items-center justify-center rounded-md border px-1 text-xs font-semibold ${
                     isCurrent
-                      ? "border-amber-400 bg-amber-400/20 scale-110"
+                      ? "border-brass-400 bg-brass-400/20 scale-110"
                       : state === "hit"
                       ? "border-emerald-600 bg-emerald-400/10 text-emerald-300"
                       : state === "miss"
@@ -155,7 +154,7 @@ export default function CompingTrainer() {
             })}
           </div>
         )}
-      </div>
+      </Card>
 
       <p className="text-xs text-slate-500">
         ハイライトされた鍵盤が現在のオンセットのコードトーンです。オンセットの前後の許容窓内でコードトーンをまとめて弾けば正解になります。

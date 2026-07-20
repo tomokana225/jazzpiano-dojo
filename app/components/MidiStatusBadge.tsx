@@ -4,7 +4,7 @@ const STATUS_COPY: Record<string, { label: string; dot: string; text: string }> 
   checking: { label: "MIDI確認中…", dot: "bg-slate-400", text: "text-slate-300" },
   unsupported: { label: "この端末はWeb MIDI非対応", dot: "bg-red-500", text: "text-red-300" },
   denied: { label: "MIDIアクセスが拒否されました", dot: "bg-red-500", text: "text-red-300" },
-  "no-devices": { label: "MIDIキーボード未接続", dot: "bg-amber-400", text: "text-amber-300" },
+  "no-devices": { label: "MIDIキーボード未接続", dot: "bg-sky-400", text: "text-sky-300" },
   ready: { label: "MIDI接続中", dot: "bg-emerald-400", text: "text-emerald-300" },
 };
 

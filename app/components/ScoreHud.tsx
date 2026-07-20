@@ -24,7 +24,7 @@ function Stat({ label, value, highlight }: { label: string; value: string; highl
   return (
     <div
       className={`rounded-lg border px-3 py-1.5 ${
-        highlight ? "border-amber-400/50 bg-amber-400/10 text-amber-300" : "border-slate-800 bg-slate-900/60 text-slate-300"
+        highlight ? "border-brass-400/50 bg-brass-400/10 text-brass-300" : "border-slate-800 bg-slate-900/60 text-slate-300"
       }`}
     >
       <span className="mr-1.5 text-slate-500">{label}</span>

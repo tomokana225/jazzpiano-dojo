@@ -30,7 +30,7 @@ export function MultiSelectChips<T extends string>({
             onClick={() => toggle(option)}
             className={`rounded-full border px-3 py-1 text-xs transition-colors ${
               active
-                ? "border-amber-400 bg-amber-400/10 text-amber-300"
+                ? "border-brass-400 bg-brass-400/10 text-brass-300"
                 : "border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200"
             }`}
           >

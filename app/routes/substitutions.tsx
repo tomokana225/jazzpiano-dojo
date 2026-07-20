@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SkipForward, Volume2 } from "lucide-react";
 import type { Route } from "./+types/substitutions";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
 import { ScoreHud } from "~/components/ScoreHud";
 import { FeedbackBanner, type FeedbackKind } from "~/components/FeedbackBanner";
 import { MultiSelectChips } from "~/components/MultiSelectChips";
 import { ProgressionPicker } from "~/components/ProgressionPicker";
+import { Card } from "~/components/ui/Card";
+import { Button } from "~/components/ui/Button";
 import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
@@ -128,12 +131,12 @@ export default function SubstitutionsTrainer() {
         <FeedbackBanner kind={feedback} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+      <Card className="p-6">
         <ProgressionPicker onChange={handleStandardChange} />
         <p className="mt-2 max-w-md text-xs text-slate-500">{standard.descriptionJa}</p>
 
         {noPairs && (
-          <p className="mt-4 text-sm text-amber-300">
+          <p className="mt-4 text-sm text-brass-300">
             この進行と選択中のパターンの組み合わせでは代理コードを作れる箇所がありません。別の進行を選ぶか、下の設定でパターンを増やしてください。
           </p>
         )}
@@ -151,33 +154,25 @@ export default function SubstitutionsTrainer() {
               >
                 {chordSymbol(currentChord)}
               </span>
-              {round.result.relation === "precedes" && <span className="text-amber-400">→ ここに挿入 →</span>}
+              {round.result.relation === "precedes" && <span className="text-brass-400">→ ここに挿入 →</span>}
               {nextChord && <span className="rounded-md border border-slate-800 px-2 py-1">{chordSymbol(nextChord)}</span>}
             </div>
 
             <p className="mt-4 text-xs uppercase tracking-widest text-slate-500">{kindDef.nameJa}</p>
-            <p className="mt-2 text-5xl font-bold text-amber-300">{chordSymbol(round.result)}</p>
+            <p className="mt-2 text-5xl font-bold tracking-tight text-brass-300">{chordSymbol(round.result)}</p>
             <p className="mx-auto mt-3 max-w-lg text-xs text-slate-500">{round.result.explanationJa}</p>
 
             <div className="mt-4 flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={playPreview}
-                className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300"
-              >
-                🔊 音を聞く
-              </button>
-              <button
-                type="button"
-                onClick={nextRound}
-                className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-slate-500"
-              >
-                ⏭ スキップ
-              </button>
+              <Button onClick={playPreview} icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+                音を聞く
+              </Button>
+              <Button onClick={nextRound} icon={<SkipForward className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+                スキップ
+              </Button>
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       <PianoKeyboard
         lowMidi={48}

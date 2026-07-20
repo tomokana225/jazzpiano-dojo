@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, Play, Square, Volume2, X } from "lucide-react";
 import type { Route } from "./+types/standards";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
 import { ScoreHud } from "~/components/ScoreHud";
 import { ProgressionPicker } from "~/components/ProgressionPicker";
+import { Card } from "~/components/ui/Card";
+import { Button } from "~/components/ui/Button";
 import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
@@ -150,16 +153,21 @@ export default function StandardsPractice() {
         <ScoreHud correct={score.correct} total={score.total} streak={score.streak} bestStreak={score.bestStreak} />
         {barFlash && (
           <div
-            className={`flex h-9 items-center rounded-lg px-3 text-sm font-semibold ${
+            className={`flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold ${
               barFlash === "hit" ? "bg-emerald-400/15 text-emerald-300" : "bg-red-400/15 text-red-300"
             }`}
           >
-            {barFlash === "hit" ? "🎹 Nice comping!" : "🙈 コードトーンを増やそう"}
+            {barFlash === "hit" ? (
+              <Check className="h-4 w-4" strokeWidth={2.75} aria-hidden />
+            ) : (
+              <X className="h-4 w-4" strokeWidth={2.75} aria-hidden />
+            )}
+            {barFlash === "hit" ? "Nice comping!" : "コードトーンを増やそう"}
           </div>
         )}
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+      <Card className="p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <ProgressionPicker onChange={handleStandardChange} />
@@ -176,32 +184,32 @@ export default function StandardsPractice() {
                 value={bpm}
                 disabled={isPlaying}
                 onChange={(e) => setBpm(Number(e.target.value))}
-                className="w-28 accent-amber-400"
+                className="w-28 accent-brass-400"
               />
             </label>
             {!isPlaying ? (
-              <button
-                type="button"
+              <Button
+                variant="primary"
                 onClick={handleStart}
-                className="rounded-full bg-amber-400 px-5 py-1.5 text-xs font-semibold text-slate-900 hover:bg-amber-300"
+                icon={<Play className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />}
               >
-                ▶ バッキング開始
-              </button>
+                バッキング開始
+              </Button>
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="danger"
                 onClick={handleStop}
-                className="rounded-full border border-red-500/60 px-5 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10"
+                icon={<Square className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />}
               >
-                ■ 停止
-              </button>
+                停止
+              </Button>
             )}
           </div>
         </div>
 
         <div className="mt-6 text-center">
           <p className="text-xs uppercase tracking-widest text-slate-500">Now</p>
-          <p className="mt-1 text-5xl font-bold text-amber-300">
+          <p className="mt-1 text-5xl font-bold tracking-tight text-brass-300">
             {currentChord ? chordSymbol(currentChord) : "—"}
           </p>
           <p className="mt-2 text-sm text-slate-500">Next: {nextChord ? chordSymbol(nextChord) : "—"}</p>
@@ -223,7 +231,7 @@ export default function StandardsPractice() {
               onClick={() => setPreviewIndex(idx)}
               className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
                 idx === displayIndex
-                  ? "border-amber-400 bg-amber-400/20 text-amber-300"
+                  ? "border-brass-400 bg-brass-400/20 text-brass-300"
                   : "border-slate-800 bg-slate-900 text-slate-500 enabled:hover:border-slate-600 enabled:hover:text-slate-300"
               } ${isPlaying ? "cursor-default" : "cursor-pointer"}`}
             >
@@ -231,10 +239,10 @@ export default function StandardsPractice() {
             </button>
           ))}
         </div>
-      </div>
+      </Card>
 
       {displayChord && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+        <Card className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-widest text-slate-500">
@@ -244,13 +252,9 @@ export default function StandardsPractice() {
                 {isPlaying ? "今鳴っているコード" : "コードをタップして選択中"} ・ アドリブ練習用に候補スケールを鍵盤に薄く表示します
               </p>
             </div>
-            <button
-              type="button"
-              onClick={playScalePreview}
-              className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300"
-            >
-              🔊 スケールを聴く
-            </button>
+            <Button onClick={playScalePreview} icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+              スケールを聴く
+            </Button>
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {scaleSuggestions.map((sid) => (
@@ -260,7 +264,7 @@ export default function StandardsPractice() {
                 onClick={() => setSelectedScale(sid)}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   sid === activeScale
-                    ? "border-amber-400 bg-amber-400/15 text-amber-300"
+                    ? "border-brass-400 bg-brass-400/15 text-brass-300"
                     : "border-slate-700 text-slate-400 hover:border-slate-500"
                 }`}
               >
@@ -268,7 +272,7 @@ export default function StandardsPractice() {
               </button>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       <p className="text-xs text-slate-500">

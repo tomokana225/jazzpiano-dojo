@@ -84,7 +84,7 @@ export function ProgressionPicker({ onChange, disabled }: ProgressionPickerProps
           type="button"
           onClick={() => setSource("builtin")}
           className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-            source === "builtin" ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
+            source === "builtin" ? "bg-brass-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           組み込みスタンダード
@@ -93,7 +93,7 @@ export function ProgressionPicker({ onChange, disabled }: ProgressionPickerProps
           type="button"
           onClick={() => setSource("custom")}
           className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-            source === "custom" ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
+            source === "custom" ? "bg-brass-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           カスタム入力
@@ -145,7 +145,7 @@ export function ProgressionPicker({ onChange, disabled }: ProgressionPickerProps
               type="button"
               onClick={applyCustomText}
               disabled={disabled}
-              className="rounded-full bg-amber-400 px-4 py-1.5 text-xs font-semibold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
+              className="rounded-full bg-brass-400 px-4 py-1.5 text-xs font-semibold text-slate-900 hover:bg-brass-300 disabled:opacity-40"
             >
               反映
             </button>
@@ -167,7 +167,7 @@ export function ProgressionPicker({ onChange, disabled }: ProgressionPickerProps
                     key={entry.id}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300"
                   >
-                    <button type="button" onClick={() => applySaved(entry)} disabled={disabled} className="hover:text-amber-300">
+                    <button type="button" onClick={() => applySaved(entry)} disabled={disabled} className="hover:text-brass-300">
                       {entry.name}
                     </button>
                     <button

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Play, Shuffle, Volume2 } from "lucide-react";
 import type { Route } from "./+types/ii-v-i";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
 import { LickStaff, type StaffNote } from "~/components/LickStaff";
 import { ScoreHud } from "~/components/ScoreHud";
 import { FeedbackBanner, type FeedbackKind } from "~/components/FeedbackBanner";
 import { MultiSelectChips } from "~/components/MultiSelectChips";
+import { Card } from "~/components/ui/Card";
+import { Button } from "~/components/ui/Button";
 import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
@@ -24,7 +27,7 @@ interface LickTimedNote extends TimedNoteSpec {
 const SLOT_COLOR: Record<LickChordSlot, string> = {
   ii: "text-sky-300",
   V: "text-fuchsia-300",
-  I: "text-amber-300",
+  I: "text-brass-300",
 };
 
 function computeTimedNotes(lick: Lick, keyRoot: PitchClass, bpm: number): LickTimedNote[] {
@@ -116,7 +119,7 @@ export default function IiVITrainer() {
         <FeedbackBanner kind={feedback} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center">
+      <Card className="p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-slate-500">
           Key of {jazzRootName(round.keyRoot)} ・ {round.lick.nameJa}
         </p>
@@ -135,7 +138,7 @@ export default function IiVITrainer() {
                 key={idx}
                 className={`flex h-9 min-w-9 items-center justify-center rounded-md border px-1 text-xs font-semibold ${SLOT_COLOR[n.chord]} ${
                   isCurrent
-                    ? "border-amber-400 bg-amber-400/20 scale-110"
+                    ? "border-brass-400 bg-brass-400/20 scale-110"
                     : state === "hit"
                     ? "border-emerald-600 bg-emerald-400/10"
                     : state === "miss"
@@ -150,31 +153,26 @@ export default function IiVITrainer() {
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-          <button
-            type="button"
+          <Button
             onClick={playDemo}
             disabled={phase === "countIn" || phase === "playing"}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-40"
+            icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}
           >
-            🔊 お手本を聞く
-          </button>
-          <button
-            type="button"
+            お手本を聞く
+          </Button>
+          <Button
+            variant="primary"
             onClick={startRun}
             disabled={phase === "countIn" || phase === "playing"}
-            className="rounded-full bg-amber-400 px-5 py-1.5 text-xs font-semibold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
+            icon={<Play className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />}
           >
-            {phase === "countIn" ? "カウントイン中…" : phase === "playing" ? "演奏中…" : "▶ スタート"}
-          </button>
-          <button
-            type="button"
-            onClick={pickRound}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-slate-500"
-          >
-            🔀 別のリック
-          </button>
+            {phase === "countIn" ? "カウントイン中…" : phase === "playing" ? "演奏中…" : "スタート"}
+          </Button>
+          <Button onClick={pickRound} icon={<Shuffle className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            別のリック
+          </Button>
         </div>
-      </div>
+      </Card>
 
       <PianoKeyboard
         lowMidi={43}
@@ -206,7 +204,7 @@ export default function IiVITrainer() {
               step={5}
               value={bpm}
               onChange={(e) => setBpm(Number(e.target.value))}
-              className="w-full accent-amber-400"
+              className="w-full accent-brass-400"
             />
           </div>
         </div>

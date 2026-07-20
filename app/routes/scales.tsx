@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Play, Shuffle, SkipForward, Volume2 } from "lucide-react";
 import type { Route } from "./+types/scales";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
 import { ScoreHud } from "~/components/ScoreHud";
 import { FeedbackBanner, type FeedbackKind } from "~/components/FeedbackBanner";
 import { MultiSelectChips } from "~/components/MultiSelectChips";
+import { Card } from "~/components/ui/Card";
+import { Button } from "~/components/ui/Button";
 import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
@@ -55,7 +58,7 @@ export default function ScalesPractice() {
             type="button"
             onClick={() => setMode(tab.id)}
             className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
-              mode === tab.id ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
+              mode === tab.id ? "bg-brass-400 text-slate-900" : "text-slate-400 hover:text-slate-200"
             }`}
           >
             {tab.label}
@@ -118,7 +121,7 @@ function ScaleExplorer() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+      <Card className="p-6">
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
             <p className="mb-2 text-xs text-slate-500">ルート</p>
@@ -142,22 +145,22 @@ function ScaleExplorer() {
 
         <div className="mt-6 text-center">
           <p className="text-xs uppercase tracking-widest text-slate-500">Selected Scale</p>
-          <p className="mt-2 text-3xl font-bold text-amber-300">
+          <p className="mt-2 text-3xl font-bold text-brass-300">
             {jazzRootName(root)} {scale.nameJa}
           </p>
           <p className="mt-1 text-sm text-slate-400">
             {scale.nameEn} ・ 主な使用場面: {scale.usageJa}
           </p>
           <p className="mt-3 text-sm text-slate-300">{noteNames.join(" - ")}</p>
-          <button
-            type="button"
+          <Button
             onClick={playPreview}
-            className="mt-4 rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300"
+            className="mt-4"
+            icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}
           >
-            🔊 音を聞く
-          </button>
+            音を聞く
+          </Button>
         </div>
-      </div>
+      </Card>
 
       <p className="text-xs text-slate-500">
         ハイライトされた鍵盤がこのスケールの構成音です。実際に弾いてみましょう — 合っていれば緑、違う音は赤になります。鍵盤上の数字はルートから見た度数です。
@@ -284,9 +287,9 @@ function StraightScaleTrainer() {
         <FeedbackBanner kind={feedback} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center">
+      <Card className="p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-slate-500">Target Scale</p>
-        <p className="mt-2 text-4xl font-bold text-amber-300">
+        <p className="mt-2 text-4xl font-bold tracking-tight text-brass-300">
           {jazzRootName(round.root)} {scale.nameJa}
         </p>
         <p className="mt-2 text-sm text-slate-400">
@@ -300,7 +303,7 @@ function StraightScaleTrainer() {
                 idx < pointer
                   ? "bg-emerald-400/20 text-emerald-300"
                   : idx === pointer && phase === "playing"
-                  ? "bg-amber-400 text-slate-900"
+                  ? "bg-brass-400 text-slate-900"
                   : "bg-slate-800 text-slate-500"
               }`}
             >
@@ -309,22 +312,14 @@ function StraightScaleTrainer() {
           ))}
         </div>
         <div className="mt-4 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={playPreview}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300"
-          >
-            🔊 お手本を聞く
-          </button>
-          <button
-            type="button"
-            onClick={nextRound}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-slate-500"
-          >
-            ⏭ スキップ
-          </button>
+          <Button onClick={playPreview} icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            お手本を聞く
+          </Button>
+          <Button onClick={nextRound} icon={<SkipForward className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            スキップ
+          </Button>
         </div>
-      </div>
+      </Card>
 
       <p className="text-xs text-slate-500">
         <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: "#fef3c7" }} />
@@ -357,7 +352,7 @@ function StraightScaleTrainer() {
               type="checkbox"
               checked={includeDescending}
               onChange={(e) => setIncludeDescending(e.target.checked)}
-              className="h-3.5 w-3.5 accent-amber-400"
+              className="h-3.5 w-3.5 accent-brass-400"
             />
             上行だけでなく下行も演奏する
           </label>
@@ -442,31 +437,23 @@ function FallingScaleTrainer() {
         <ScoreHud correct={score.correct} total={score.total} streak={score.streak} bestStreak={score.bestStreak} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center">
+      <Card className="p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-slate-500">Falling Notes</p>
-        <p className="mt-2 text-3xl font-bold text-amber-300">
+        <p className="mt-2 text-3xl font-bold tracking-tight text-brass-300">
           {jazzRootName(round.root)} {scale.nameJa}
         </p>
         <p className="mt-2 text-sm text-slate-400">
           上から降ってくるノートが下のラインに届いた瞬間に、同じ鍵盤を押してください(オクターブ違いでもOK)。
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={start}
-            className="rounded-full bg-amber-400 px-5 py-1.5 text-xs font-semibold text-slate-900 hover:bg-amber-300"
-          >
-            ▶ スタート
-          </button>
-          <button
-            type="button"
-            onClick={pickRound}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-slate-500"
-          >
-            🔀 別のスケール
-          </button>
+          <Button variant="primary" onClick={start} icon={<Play className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />}>
+            スタート
+          </Button>
+          <Button onClick={pickRound} icon={<Shuffle className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            別のスケール
+          </Button>
         </div>
-      </div>
+      </Card>
 
       <div>
         <FallingNotes
@@ -509,7 +496,7 @@ function FallingScaleTrainer() {
               step={5}
               value={bpm}
               onChange={(e) => setBpm(Number(e.target.value))}
-              className="w-full accent-amber-400"
+              className="w-full accent-brass-400"
             />
           </div>
         </div>
@@ -633,7 +620,7 @@ function ScalePhraseTrainer() {
         <FeedbackBanner kind={feedback} />
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center">
+      <Card className="p-6 text-center">
         <p className="text-xs uppercase tracking-widest text-slate-500">
           {jazzRootName(round.root)} {scale.nameJa} ・ {pattern.nameJa}
         </p>
@@ -648,7 +635,7 @@ function ScalePhraseTrainer() {
                 key={idx}
                 className={`flex h-9 min-w-9 items-center justify-center rounded-md border px-1 text-xs font-semibold text-slate-200 ${
                   isCurrent
-                    ? "border-amber-400 bg-amber-400/20 scale-110"
+                    ? "border-brass-400 bg-brass-400/20 scale-110"
                     : state === "hit"
                     ? "border-emerald-600 bg-emerald-400/10"
                     : state === "miss"
@@ -663,31 +650,26 @@ function ScalePhraseTrainer() {
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-          <button
-            type="button"
+          <Button
             onClick={playDemo}
             disabled={phase === "countIn" || phase === "playing"}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-40"
+            icon={<Volume2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}
           >
-            🔊 お手本を聞く
-          </button>
-          <button
-            type="button"
+            お手本を聞く
+          </Button>
+          <Button
+            variant="primary"
             onClick={startRun}
             disabled={phase === "countIn" || phase === "playing"}
-            className="rounded-full bg-amber-400 px-5 py-1.5 text-xs font-semibold text-slate-900 hover:bg-amber-300 disabled:opacity-40"
+            icon={<Play className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />}
           >
-            {phase === "countIn" ? "カウントイン中…" : phase === "playing" ? "演奏中…" : "▶ スタート"}
-          </button>
-          <button
-            type="button"
-            onClick={pickRound}
-            className="rounded-full border border-slate-700 px-4 py-1.5 text-xs text-slate-300 hover:border-slate-500"
-          >
-            🔀 別のフレーズ
-          </button>
+            {phase === "countIn" ? "カウントイン中…" : phase === "playing" ? "演奏中…" : "スタート"}
+          </Button>
+          <Button onClick={pickRound} icon={<Shuffle className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />}>
+            別のフレーズ
+          </Button>
         </div>
-      </div>
+      </Card>
 
       <PianoKeyboard
         lowMidi={43}
@@ -729,7 +711,7 @@ function ScalePhraseTrainer() {
               step={5}
               value={bpm}
               onChange={(e) => setBpm(Number(e.target.value))}
-              className="w-full accent-amber-400"
+              className="w-full accent-brass-400"
             />
           </div>
         </div>
