@@ -16,6 +16,11 @@ interface LickStaffProps {
   /** Index of the note currently being played, for highlighting. */
   currentIndex?: number;
   states?: ("pending" | "hit" | "miss")[];
+  /** Elapsed playback position, in eighth-note units. Drives the auto-scroll so this position stays under the playhead. Defaults to 0 (static). */
+  currentEighths?: number;
+  /** Fixed viewport width in px. When set, the staff scrolls horizontally as `currentEighths` advances, like a scrolling score. Defaults to the full content width (static, no scrolling). */
+  viewportWidth?: number;
+  className?: string;
 }
 
 const LINE_GAP = 12;
@@ -30,6 +35,10 @@ const STEM_LEN = 34;
 // lands at exactly the same x as the barline itself (both are placed by the
 // same eighths-since-start -> x mapping), so they visually overlap.
 const BAR_GAP = 28;
+// Fixed x (within the viewport) that "now" stays pinned to while the staff
+// auto-scrolls — just to the right of the clef, matching the reference
+// layout's playhead position.
+const PLAYHEAD_X = LEFT_PAD + 8;
 
 function chordForSlot(slot: LickChordSlot, keyRoot: PitchClass): string {
   if (slot === "ii") return chordSymbol({ root: pc(keyRoot + 2), quality: "min7" });
@@ -138,7 +147,15 @@ function findBeamGroups(rnotes: RenderNote[]): number[][] {
   return groups;
 }
 
-export function LickStaff({ notes, keyRoot, currentIndex = -1, states }: LickStaffProps) {
+export function LickStaff({
+  notes,
+  keyRoot,
+  currentIndex = -1,
+  states,
+  currentEighths = 0,
+  viewportWidth,
+  className,
+}: LickStaffProps) {
   const preferFlat = preferFlatForKey(keyRoot);
   // Every full measure elapsed before this point pushes notes right by
   // BAR_GAP, reserving breathing room around each barline (see BAR_GAP).
@@ -217,8 +234,19 @@ export function LickStaff({ notes, keyRoot, currentIndex = -1, states }: LickSta
     return { ...n, step, accidental, x: timeToX(n.startEighths), y: yForStep(step) };
   });
 
+  const vw = viewportWidth ?? layout.width;
+  const scrollOffset = Math.max(0, timeToX(currentEighths) - PLAYHEAD_X);
+  // `className` fully replaces the border/rounding classes (not appended) so
+  // a caller stacking this above another panel can drop the rounding and
+  // bottom border without fighting Tailwind's utility-order cascade.
+  const frameClassName = className ?? "rounded-xl border border-slate-800";
+
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-50 p-2">
+    <div
+      className={`relative overflow-hidden bg-slate-50 ${frameClassName}`}
+      style={{ width: vw, maxWidth: "100%" }}
+    >
+      <div style={{ width: layout.width, transform: `translateX(${-scrollOffset}px)` }}>
       <svg width={layout.width} height={height} style={{ minWidth: layout.width }} className="block">
         {/* staff lines */}
         {staffLineYs.map((y, i) => (
@@ -364,6 +392,13 @@ export function LickStaff({ notes, keyRoot, currentIndex = -1, states }: LickSta
           );
         })}
       </svg>
+      </div>
+      {viewportWidth !== undefined && (
+        <div
+          className="pointer-events-none absolute inset-y-0 w-0.5 bg-sky-400/70"
+          style={{ left: PLAYHEAD_X }}
+        />
+      )}
     </div>
   );
 }

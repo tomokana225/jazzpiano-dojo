@@ -20,6 +20,7 @@ interface FallingNotesProps {
   fallSeconds?: number;
   onResult?: (index: number, hit: boolean) => void;
   onComplete?: () => void;
+  className?: string;
 }
 
 const LANE_HEIGHT = 260;
@@ -33,6 +34,7 @@ export function FallingNotes({
   fallSeconds = 2.4,
   onResult,
   onComplete,
+  className,
 }: FallingNotesProps) {
   const { subscribe } = useMidiContext();
   const layout = useMemo(() => keyboardLayout(lowMidi, highMidi), [lowMidi, highMidi]);
@@ -129,8 +131,12 @@ export function FallingNotes({
     />
   ));
 
+  // `className` fully replaces the border/rounding classes (not appended) so
+  // a caller stacking this between two other panels can drop the rounding
+  // and top border without fighting Tailwind's utility-order cascade.
+  const frameClassName = className ?? "rounded-t-xl border border-b-0 border-slate-800";
   return (
-    <div className="overflow-x-auto rounded-t-xl border border-b-0 border-slate-800 bg-slate-950">
+    <div className={`overflow-x-auto bg-slate-950 ${frameClassName}`}>
       <svg width={layout.width} height={LANE_HEIGHT} style={{ minWidth: layout.width }} className="block">
         {whiteLaneShades}
         {/* lane divider lines at each C */}

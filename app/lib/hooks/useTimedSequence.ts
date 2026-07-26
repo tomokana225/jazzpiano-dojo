@@ -16,7 +16,7 @@ const HIT_GRACE_SEC = 0.3;
 const MISS_GRACE_SEC = 0.25;
 const END_GRACE_SEC = 0.4;
 const SUCCESS_THRESHOLD = 0.8;
-const COUNT_IN_BEATS = 4;
+export const COUNT_IN_BEATS = 4;
 
 /**
  * Drives a "play this timed sequence of notes" mini rhythm-game: a count-in,

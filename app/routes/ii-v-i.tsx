@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Play, Shuffle, Volume2 } from "lucide-react";
 import type { Route } from "./+types/ii-v-i";
 import { PianoKeyboard } from "~/components/PianoKeyboard";
 import { LickStaff, type StaffNote } from "~/components/LickStaff";
+import { FallingNotes, type FallingNote } from "~/components/FallingNotes";
 import { ScoreHud } from "~/components/ScoreHud";
 import { FeedbackBanner, type FeedbackKind } from "~/components/FeedbackBanner";
 import { MultiSelectChips } from "~/components/MultiSelectChips";
@@ -12,23 +13,21 @@ import { useMidiContext } from "~/lib/context/MidiProvider";
 import { useProgressContext } from "~/lib/context/ProgressProvider";
 import { useRoundScore } from "~/lib/hooks/useRoundScore";
 import { useNotePlayer } from "~/lib/hooks/useSynth";
-import { useTimedSequence, type TimedNoteSpec } from "~/lib/hooks/useTimedSequence";
+import { useTimedSequence, COUNT_IN_BEATS, type TimedNoteSpec } from "~/lib/hooks/useTimedSequence";
+import { keyboardLayout } from "~/lib/keyboardGeometry";
 import { II_V_I_LICKS, type Lick, type LickChordSlot } from "~/lib/theory/licks";
-import { jazzRootName, pc, randomPitchClass, type PitchClass } from "~/lib/theory/notes";
+import { jazzRootName, randomPitchClass, type PitchClass } from "~/lib/theory/notes";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "II-V-Iリック練習 - Jazz Piano Dojo" }];
 }
 
+const KEYBOARD_LOW = 43;
+const KEYBOARD_HIGH = 96;
+
 interface LickTimedNote extends TimedNoteSpec {
   chord: LickChordSlot;
 }
-
-const SLOT_COLOR: Record<LickChordSlot, string> = {
-  ii: "text-sky-300",
-  V: "text-fuchsia-300",
-  I: "text-brass-300",
-};
 
 function computeTimedNotes(lick: Lick, keyRoot: PitchClass, bpm: number): LickTimedNote[] {
   const secPerEighth = 60 / bpm / 2;
@@ -83,11 +82,45 @@ export default function IiVITrainer() {
 
   const { phase, noteStates, currentIndex, start, resetIdle } = useTimedSequence(handleFinish);
 
+  // Independent wall-clock elapsed-time tracker spanning the count-in AND
+  // the playing phase, used only to drive the scrolling staff / falling
+  // notes visuals. `useTimedSequence`'s own internal clock only starts
+  // ticking once the count-in ends, so it can't drive a lead-in animation
+  // during the count-in itself; this stays entirely separate from — and
+  // never touches — the actual grading/score, which remains solely
+  // `useTimedSequence`'s responsibility.
+  const roundStartRef = useRef(0);
+  const [roundElapsedSec, setRoundElapsedSec] = useState(0);
+
+  useEffect(() => {
+    if (phase !== "countIn" && phase !== "playing") return;
+    let raf: number;
+    const tick = () => {
+      setRoundElapsedSec((performance.now() - roundStartRef.current) / 1000);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [phase]);
+
+  const secPerEighth = 60 / bpm / 2;
+  const countInSec = COUNT_IN_BEATS * (60 / bpm);
+  const currentEighths = roundElapsedSec / secPerEighth;
+  // Falling notes reach the hit line `countInSec` later than the lick's own
+  // `startSec` (which is relative to when "playing" begins), so this piano
+  // roll's fall lead-in plays out during the count-in and the first note
+  // arrives exactly as the count-in ends.
+  const fallingNotes = useMemo<FallingNote[]>(
+    () => notes.map((n) => ({ midi: n.midi, hitAtSec: n.startSec + countInSec })),
+    [notes, countInSec],
+  );
+
   const pickRound = useCallback(() => {
     const pool = selectedLicks.size > 0 ? II_V_I_LICKS.filter((l) => selectedLicks.has(l.id)) : II_V_I_LICKS;
     const lick = pool[Math.floor(Math.random() * pool.length)];
     setRound((prev) => ({ id: prev.id + 1, lick, keyRoot: randomPitchClass() }));
     setFeedback(null);
+    setRoundElapsedSec(0);
     resetIdle();
   }, [selectedLicks, resetIdle]);
 
@@ -100,10 +133,13 @@ export default function IiVITrainer() {
 
   function startRun() {
     setFeedback(null);
+    roundStartRef.current = performance.now();
     start(notes, bpm);
   }
 
   const targetMidiNotes = currentIndex >= 0 ? new Set([notes[currentIndex].midi]) : undefined;
+  const keyboardWidth = useMemo(() => keyboardLayout(KEYBOARD_LOW, KEYBOARD_HIGH).width, []);
+  const running = phase === "countIn" || phase === "playing";
 
   return (
     <div className="space-y-6">
@@ -124,33 +160,6 @@ export default function IiVITrainer() {
           Key of {jazzRootName(round.keyRoot)} ・ {round.lick.nameJa}
         </p>
         <p className="mx-auto mt-2 max-w-lg text-xs text-slate-500">{round.lick.descriptionJa}</p>
-
-        <div className="mt-4">
-          <LickStaff notes={staffNotes} keyRoot={round.keyRoot} currentIndex={currentIndex} states={noteStates} />
-        </div>
-
-        <div className="mt-4 flex flex-wrap justify-center gap-1">
-          {notes.map((n, idx) => {
-            const state = noteStates[idx];
-            const isCurrent = idx === currentIndex;
-            return (
-              <span
-                key={idx}
-                className={`flex h-9 min-w-9 items-center justify-center rounded-md border px-1 text-xs font-semibold ${SLOT_COLOR[n.chord]} ${
-                  isCurrent
-                    ? "border-brass-400 bg-brass-400/20 scale-110"
-                    : state === "hit"
-                    ? "border-emerald-600 bg-emerald-400/10"
-                    : state === "miss"
-                    ? "border-red-600 bg-red-400/10"
-                    : "border-slate-700 bg-slate-800/60"
-                }`}
-              >
-                {jazzRootName(pc(n.midi))}
-              </span>
-            );
-          })}
-        </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           <Button
@@ -174,14 +183,33 @@ export default function IiVITrainer() {
         </div>
       </Card>
 
-      <PianoKeyboard
-        lowMidi={43}
-        highMidi={96}
-        activeNotes={activeNotes}
-        targetMidiNotes={targetMidiNotes}
-        onNoteDown={pressNote}
-        onNoteUp={releaseNote}
-      />
+      <div>
+        <LickStaff
+          notes={staffNotes}
+          keyRoot={round.keyRoot}
+          currentIndex={currentIndex}
+          states={noteStates}
+          currentEighths={currentEighths}
+          viewportWidth={keyboardWidth}
+          className="rounded-t-xl border border-b-0 border-slate-800"
+        />
+        <FallingNotes
+          lowMidi={KEYBOARD_LOW}
+          highMidi={KEYBOARD_HIGH}
+          notes={fallingNotes}
+          running={running}
+          className="border-x border-slate-800"
+        />
+        <PianoKeyboard
+          lowMidi={KEYBOARD_LOW}
+          highMidi={KEYBOARD_HIGH}
+          activeNotes={activeNotes}
+          targetMidiNotes={targetMidiNotes}
+          onNoteDown={pressNote}
+          onNoteUp={releaseNote}
+          className="rounded-b-xl border border-t-0 border-slate-800"
+        />
+      </div>
 
       <details className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-400" open>
         <summary className="cursor-pointer select-none font-semibold text-slate-200">練習設定</summary>
